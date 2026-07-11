@@ -14,10 +14,10 @@ Requires Node.js (18+).
 
 ```bash
 npm install
-npm run dev
+npm start
 ```
 
-Then open the URL Vite prints (usually `http://localhost:5173`).
+This opens the app in your default browser automatically. If you'd rather open it yourself, `npm run dev` does the same thing without launching a browser — just open the URL Vite prints (usually `http://localhost:5173`).
 
 Other commands:
 
