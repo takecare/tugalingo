@@ -1,5 +1,7 @@
 # tugalingo
 
+**Play it live: https://takecare.github.io/tugalingo/**
+
 A small European Portuguese vocabulary game: match an emoji to the Portuguese word for it. Built as a focused, standalone learning tool — see [docs/design.md](docs/design.md) for the design decisions behind it.
 
 ![Home screen](docs/images/screen-home-with-streak.png)
@@ -26,13 +28,9 @@ npm run preview   # serve the production build locally to sanity-check it
 
 ## Deploying
 
-`npm run build` produces a static `dist/` folder — deploy it to any static host:
+Deployed automatically to GitHub Pages by `.github/workflows/deploy.yml` — every push to `main` builds with Vite and publishes `dist/`. No secrets or environment variables to configure.
 
-- **Vercel**: `npx vercel` (or connect the repo in the Vercel dashboard) — no config needed, it auto-detects Vite.
-- **Netlify**: `npx netlify deploy` with build command `npm run build` and publish directory `dist`.
-- **GitHub Pages**: push `dist/` to a `gh-pages` branch, or use the `actions/deploy-pages` GitHub Action.
-
-There's no backend and no environment variables to configure — progress is stored in the player's browser (`localStorage`), so any static host works.
+To deploy elsewhere instead, `npm run build` produces the same static `dist/` folder, deployable to any static host (Vercel, Netlify, Cloudflare Pages, etc.) — just remember to drop or change the `base: '/tugalingo/'` path in `vite.config.js` if the site won't live under a `/tugalingo/` subpath.
 
 ## Docs
 
