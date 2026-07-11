@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react'
-import { BASE_QUESTIONS, EXTEND_THRESHOLD, EXTENDED_TOTAL, poolForLesson } from '../lib/lessons'
+import { useState } from 'react'
+import { BASE_QUESTIONS, EXTEND_THRESHOLD, EXTENDED_TOTAL } from '../lib/lessons'
 import { pickRound } from '../lib/round'
 import OptionButton from './OptionButton'
 
-export default function Lesson({ lessonNumber, onComplete, onExit }) {
-  const pool = useMemo(() => poolForLesson(lessonNumber), [lessonNumber])
+export default function Lesson({ pool, onComplete, onExit }) {
   const [index, setIndex] = useState(0)
   const [totalQuestions, setTotalQuestions] = useState(BASE_QUESTIONS)
   const [correctCount, setCorrectCount] = useState(0)

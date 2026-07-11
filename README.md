@@ -1,10 +1,10 @@
 # tugalingo
 
-A small European Portuguese vocabulary game: match an emoji to the Portuguese word for it, structured as a sequence of short lessons. Built as a focused, standalone learning tool — see [docs/design.md](docs/design.md) for the design decisions behind it.
+A small European Portuguese vocabulary game: match an emoji to the Portuguese word for it. Built as a focused, standalone learning tool — see [docs/design.md](docs/design.md) for the design decisions behind it.
 
-![Lesson map](docs/images/screen-map-with-progress.png)
+![Home screen](docs/images/screen-home-with-streak.png)
 
-Each lesson is a minimum of 10 questions, extending to 12-14 if you score well on the first 10. Progress (lessons completed, best score per lesson, and a daily activity calendar) is saved in the browser — see [docs/design.md](docs/design.md#lesson-length-and-the-extend-rule) for the exact rule.
+Press "New Lesson" to play — each lesson is a minimum of 10 questions, extending to 12-14 if you score well on the first 10. A day streak and an activity heatmap track daily play; progress is saved in the browser. See [docs/design.md](docs/design.md#streak--daily-activity) for the reasoning behind the streak, and [docs/design.md](docs/design.md#lesson-length-and-the-extend-rule) for the exact extend rule.
 
 ## Running it locally
 

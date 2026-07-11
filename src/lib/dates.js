@@ -14,3 +14,19 @@ export function lastNDays(n, endDate = new Date()) {
   }
   return days
 }
+
+// Consecutive days (ending today) with at least one completed lesson. If
+// today has no lesson yet, today doesn't break the streak until it's over —
+// so counting starts from yesterday instead, keeping yesterday's streak alive.
+export function currentStreak(activityByDate, today = new Date()) {
+  const cursor = new Date(today)
+  const doneToday = (activityByDate[dateKey(cursor)]?.lessonsCompleted ?? 0) > 0
+  if (!doneToday) cursor.setDate(cursor.getDate() - 1)
+
+  let streak = 0
+  while ((activityByDate[dateKey(cursor)]?.lessonsCompleted ?? 0) > 0) {
+    streak += 1
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+}

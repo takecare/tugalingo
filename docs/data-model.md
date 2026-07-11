@@ -27,15 +27,18 @@ Example entry:
 
 ### How `level` maps to lessons
 
-`src/lib/lessons.js` decides the word pool per lesson number:
+`src/lib/lessons.js` decides the word pool for the next lesson from how many lessons are already in the player's history:
 
 ```js
-function levelCapForLesson(lessonNumber) {
-  return lessonNumber <= 3 ? 1 : 2
+const LEVEL_2_UNLOCK_AFTER = 3
+
+export function currentWordPool(progress) {
+  const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
+  return words.filter((w) => w.level <= cap)
 }
 ```
 
-Lessons 1-3 draw only from `level: 1` words; lesson 4 onward draws from the full `level <= 2` pool. See [design.md](design.md#word-difficulty-ramp) for the reasoning.
+The first 3 completed lessons draw only from `level: 1` words; from the 4th completed lesson onward, the pool is the full `level <= 2` set. See [design.md](design.md#word-difficulty-ramp) for the reasoning.
 
 ## Progress — `localStorage["tugalingo-progress"]`
 
@@ -43,27 +46,25 @@ Written by `src/hooks/useProgress.js`, read back on every page load.
 
 ```json
 {
-  "totalLessonsCompleted": 3,
-  "lessons": {
-    "1": { "attempts": 2, "bestCorrect": 14, "bestTotal": 14, "lastPlayedAt": "2026-07-11T17:41:14.223Z" },
-    "2": { "attempts": 1, "bestCorrect": 9, "bestTotal": 10, "lastPlayedAt": "2026-07-11T18:02:03.881Z" }
-  },
+  "history": [
+    { "completedAt": "2026-07-11T17:41:14.223Z", "correct": 14, "total": 14 },
+    { "completedAt": "2026-07-11T18:02:03.881Z", "correct": 9, "total": 10 }
+  ],
   "activityByDate": {
-    "2026-07-11": { "lessonsCompleted": 3 }
+    "2026-07-11": { "lessonsCompleted": 2 }
   }
 }
 ```
 
 | Field | Meaning |
 |---|---|
-| `totalLessonsCompleted` | Lifetime count of finished lessons, including replays of the same lesson number. This is "how many lessons has the player played." |
-| `lessons["<N>"].attempts` | How many times lesson *N* has been completed. |
-| `lessons["<N>"].bestCorrect` / `bestTotal` | The best-scoring attempt at lesson *N*, kept as a fraction (`bestCorrect`/`bestTotal`) rather than a percentage so both the raw score and the fact that the lesson may have extended (10 vs 12 vs 14) stay visible. Comparing attempts uses `correct / total`, so a 9/10 doesn't automatically lose to an 11/14 — it's judged by accuracy, not question count. |
-| `lessons["<N>"].lastPlayedAt` | ISO timestamp of the most recent attempt at lesson *N* (not necessarily the best one). |
-| `activityByDate["<YYYY-MM-DD>"].lessonsCompleted` | How many lessons were completed on that calendar day, keyed by the player's local date (`src/lib/dates.js#dateKey`). Drives both the "done today" banner and the heatmap. |
+| `history` | One entry per completed lesson, in order, ever. There's no per-lesson identity to key by since there's no lesson numbering — every completion is just appended. `history.length` is "how many lessons has the player played," and it's also what `currentWordPool` reads to decide the difficulty ramp. |
+| `history[i].correct` / `total` | That attempt's score, kept as a fraction rather than a percentage so the fact that a lesson may have extended (10 vs 12 vs 14 questions) stays visible. A personal-best comparison (shown on the results screen) is `correct / total` across the whole array, not a stored field — computed fresh each time so it can't drift out of sync with `history`. |
+| `history[i].completedAt` | ISO timestamp of that completion. |
+| `activityByDate["<YYYY-MM-DD>"].lessonsCompleted` | How many lessons were completed on that calendar day, keyed by the player's local date (`src/lib/dates.js#dateKey`). Drives the heatmap; the current streak (`src/lib/dates.js#currentStreak`) is also computed from this object on the fly rather than stored, for the same reason — it can never disagree with the record it's derived from. |
 
-A lesson only writes to this object once it's *completed* — exiting mid-lesson (the ✕ button) records nothing, so an abandoned attempt never counts as a "played" lesson or shows up in a day's activity count.
+A lesson only writes to this object once it's *completed* — exiting mid-lesson (the ✕ button) records nothing, so an abandoned attempt never counts toward `history`, a day's activity count, or the streak.
 
 This is **per-browser, not per-player** — there's no login, so switching browsers/devices starts fresh (see [architecture.md](architecture.md#why-no-backend) for the tradeoff).
 
-Session-only state (current round, current streak, current question index/total within a lesson) lives in `Lesson.jsx`'s React state and is *not* persisted — it's discarded the moment a lesson ends or is exited, since only completed lessons are meaningful history.
+Session-only state (current round, in-lesson streak, current question index/total) lives in `Lesson.jsx`'s React state and is *not* persisted — it's discarded the moment a lesson ends or is exited, since only completed lessons are meaningful history.

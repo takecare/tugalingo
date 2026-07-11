@@ -25,15 +25,15 @@ Lessons are the unit of play, not an endless stream — this is the core change 
 
 The extension is a reward for strong performance, not a random bonus round — the better you did on the first 10, the longer (and implicitly harder to sustain) the lesson gets. This was chosen over a fixed-length lesson because it means someone who already knows the words moves through faster on an easy lesson and gets more practice exactly when they're doing well, without needing a separate "hard mode" toggle.
 
-## Lesson unlocking and replay
+## "New Lesson," not a lesson tree
 
-Lessons are sequential: lesson *N* unlocks once lesson *N-1* has been completed at least once (lesson 1 is always open). Completed lessons stay playable — replaying one doesn't erase the previous result, it just updates the **best score** for that lesson if the new attempt beats it (see [data-model.md](data-model.md#progress--localstoragetugalingo-progress) for exactly how that's stored). This mirrors how a real learner actually uses drilling: going back to reinforce an earlier lesson should always be safe, never something that can make your recorded progress look worse.
+There's no lesson map, no numbered lessons, no unlocking one lesson by finishing another. There's a single **New Lesson** button on the home screen — pressing it always starts a fresh lesson from whatever the current word pool is. This is a deliberate change from an earlier numbered-lesson-path version: a lesson tree implies a finish line ("I've done all the lessons"), which works against a habit-forming vocabulary drill that's meant to be played indefinitely, a little bit every day. Quitting a lesson partway (the ✕ button) discards it entirely — no partial credit, and it doesn't count toward the day's activity or the streak (see below). Nothing is written to storage until a lesson is actually completed.
 
 ## Word difficulty ramp
 
-Words are tagged `level: 1` or `level: 2` in the word bank. Lessons 1-3 draw only from level-1 words; from lesson 4 onward, the pool includes both levels combined. This is a coarse, lesson-indexed ramp rather than the old "unlock after N lifetime correct answers" rule — tying difficulty to lesson number (rather than a running lifetime counter) means the ramp is the same every time regardless of how many times earlier lessons get replayed. Adding a `level: 3` tier to `words.json` would extend the ramp further without any code change beyond adjusting `levelCapForLesson` in `src/lib/lessons.js`.
+Words are tagged `level: 1` or `level: 2` in the word bank. The first 3 lessons ever completed draw only from level-1 words; from the 4th completed lesson onward, the pool includes both levels combined (`currentWordPool` in `src/lib/lessons.js`, keyed off how many lessons are in the player's history so far). Adding a `level: 3` tier to `words.json` would extend the ramp further by adjusting the threshold in that same function.
 
-The `category` field (`food`/`animals`) is still on every word but isn't used for gating anymore — lessons are one mixed track rather than per-category tracks, so category is just descriptive metadata for now (useful if a category-specific lesson track gets added later).
+The `category` field (`food`/`animals`) is still on every word but isn't used for gating — there's one mixed pool rather than per-category tracks, so category is just descriptive metadata for now (useful if a category-specific mode gets added later).
 
 ## The gender badge mechanic
 
@@ -45,9 +45,14 @@ Portuguese nouns have grammatical gender that doesn't always match biological se
 
 The badge is redundant with the article on purpose — repetition of the same signal (article + symbol) reinforces the gender pairing faster than the article alone, especially for a learner whose native language (English) doesn't mark noun gender at all.
 
-## Daily activity tracking
+## Streak + daily activity
 
-Two things are tracked day-to-day: whether *today* has a completed lesson, and a calendar view of past days. This was built as a heatmap (count per day) rather than a classic "consecutive-day streak counter" — a streak number creates all-or-nothing anxiety (miss one day, the whole number resets to zero and the history is gone). A heatmap just shows what actually happened, good days and gaps alike, without punishing a missed day by erasing the record of everything before it.
+The goal here is explicitly to create daily pressure — the player should feel like skipping a day costs them something, the same way Duolingo's streak does. Two things work together on the home screen:
+
+- **Streak** — the number of consecutive days with at least one completed lesson, shown large at the top (`🔥 N day streak`). If today hasn't had a lesson yet, the streak from yesterday is still shown as "alive" with a nudge ("Do a lesson today to keep your streak!") rather than immediately showing 0 — the streak only actually breaks once a day passes with nothing done. This is computed fresh from the activity history every time (`currentStreak` in `src/lib/dates.js`), not stored as its own number, so it can never drift out of sync with the underlying daily record.
+- **Activity heatmap** — the last 12 weeks, one cell per day, shaded by how many lessons were done. This is the memory the streak number doesn't have: a broken streak still leaves a visible record of everything before the gap, rather than erasing it. The streak creates the daily pressure; the heatmap is the honest longer-term picture underneath it.
+
+A lesson only counts for the streak/heatmap if it's completed — see [above](#new-lesson-not-a-lesson-tree) on why quitting mid-lesson doesn't count.
 
 ## Why verb conjugation is out of scope for this mode
 
