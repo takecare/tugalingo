@@ -224,6 +224,116 @@
   opacity: 0.5;
 }
 
+.option--emoji {
+  font-size: 40px;
+  justify-content: center;
+}
+
+.option--word {
+  justify-content: center;
+  font-size: 18px;
+}
+
+/* Reverse-match: word prompt instead of an emoji */
+
+.word-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+}
+
+.word-display__word {
+  font-size: 40px;
+  color: var(--text-h);
+}
+
+.word-display__gender {
+  font-size: 22px;
+  opacity: 0.6;
+}
+
+/* Sentence-fill: verb conjugation in a minimal sentence frame */
+
+.sentence-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+}
+
+.sentence-display__emoji {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.sentence-display__text {
+  font-size: 24px;
+  color: var(--text-h);
+}
+
+.sentence-display__blank {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Type-in: free-text answer instead of choices */
+
+.type-in {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.type-in__input {
+  flex: 1;
+  font: inherit;
+  font-size: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.type-in__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.type-in__input--correct {
+  border-color: #2fb344;
+  background: rgba(47, 179, 68, 0.12);
+}
+
+.type-in__input--incorrect {
+  border-color: #e5484d;
+  background: rgba(229, 72, 77, 0.12);
+}
+
+.type-in__submit {
+  font: inherit;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.type-in__submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.type-in__answer {
+  font-size: 15px;
+  color: var(--text);
+  margin: 0;
+}
+
 /* Lesson results */
 
 .lesson-results {

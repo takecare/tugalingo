@@ -40,6 +40,61 @@ export function currentWordPool(progress) {
 
 The first 3 completed lessons draw only from `level: 1` words; from the 4th completed lesson onward, the pool is the full `level <= 2` set. See [design.md](design.md#word-difficulty-ramp) for the reasoning.
 
+## Verb bank — `src/data/verbs.json`
+
+An array of regular `-ar` present-tense verbs, used by the `sentence-fill` question type (see [design.md](design.md#question-types) for why conjugation needed its own content and question type rather than reusing `words.json`).
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `id` | string | `"falar"` | Stable, unique, ASCII — same role as a word's `id`. |
+| `en` | string | `"to speak"` | English gloss — not shown in-game (see [design.md](design.md#question-types) on why), kept for readability of this file. |
+| `emoji` | string | `"🗣️"` | The scene-setting icon shown above the sentence. |
+| `level` | number | `1` | Same ramp mechanism as `words.json`'s `level` — currently all verbs are `1`. |
+| `conjugations` | object | see below | Present-tense forms, keyed by person. |
+
+`conjugations` has five keys — `eu`, `tu`, `ele_ela`, `nos`, `eles_elas` — each `{ pronoun, form }`, e.g. `"tu": { "pronoun": "Tu", "form": "falas" }`. Only five persons are modeled (no "vós") since that's what's actually in everyday use in Portugal; note `tu` is included deliberately — European Portuguese uses it in informal speech where Brazilian Portuguese would say `você`, so it's part of what makes this "European," not "generic," Portuguese.
+
+Example entry:
+
+```json
+{
+  "id": "falar",
+  "en": "to speak",
+  "emoji": "🗣️",
+  "level": 1,
+  "conjugations": {
+    "eu": { "pronoun": "Eu", "form": "falo" },
+    "tu": { "pronoun": "Tu", "form": "falas" },
+    "ele_ela": { "pronoun": "Ele/Ela", "form": "fala" },
+    "nos": { "pronoun": "Nós", "form": "falamos" },
+    "eles_elas": { "pronoun": "Eles/Elas", "form": "falam" }
+  }
+}
+```
+
+**Adding a verb** is appending one of these objects — only regular `-ar` verbs fit the current content without changes; an irregular verb would still work data-wise (the five forms are just spelled out, not derived), it's only a curation choice to stick to regulars for now (see [design.md](design.md#question-types)).
+
+## Question schema
+
+`src/lib/questionTypes/` generates one of these per round, and `src/components/questions/` renders it — see [architecture.md](architecture.md#question-types) for how the registries plug together. Every question type produces a `Question` object with this shape (some fields only make sense for multiple-choice types; `type-in` leaves `choices`/`correctChoiceIds` empty and checks against `correctText` instead):
+
+| Field | Type | Example (`emoji-match`) | Notes |
+|---|---|---|---|
+| `id` | string | `"maca"` | Unique per question instance — used as the React key for the current round (`sentence-fill`'s is `"<verbId>-<person>"` since the same verb can produce multiple distinct questions). |
+| `type` | string | `"emoji-match"` | Which registry entry generated/renders this question. |
+| `wordId` | string | `"maca"` | The underlying `words.json`/`verbs.json` entry this question is about — used to avoid repeating the same word or verb twice in a row. |
+| `title` | string | `"Match the word"` | Short description of the exercise; not currently rendered by any renderer but available for a type whose prompt needs framing. |
+| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`. |
+| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` choices are `{ id, label }` (the conjugated form text). Empty for `type-in`. |
+| `correctChoiceIds` | array of string | `["maca"]` | Which `choices[].id`(s) are correct — an array rather than a single id so a future type can have more than one right answer. Empty for `type-in`. |
+| `correctText` | string | *(only on `type-in`)* | What the player's normalized input is compared against — see `typeIn.js`'s `normalize()` for the accent/case-insensitive comparison. |
+
+An `Answer` is whatever the player submitted, passed to `checkAnswer(question, answer)`:
+- Choice-based types: `{ type: "emoji-match", choiceId: "maca" }`
+- `type-in`: `{ type: "type-in", text: "maca" }` (whatever the player typed, unnormalized — `isCorrect` does the normalizing)
+
+**Adding a question type** means adding `src/lib/questionTypes/<type>.js` (exporting `type`, `generate(context, avoidWordId)`, `isCorrect(question, answer)`) and `src/components/questions/<Type>Question.jsx` (rendering `{ question, feedback, onAnswer }`), then registering both in their respective `index` files. Listing the new type in `QUESTION_TYPE_UNLOCKS` (`src/lib/lessons.js`) puts it into rotation once the chosen lesson-count threshold is reached — see [design.md](design.md#question-types) for the current thresholds and why they're staggered rather than all unlocked at once.
+
 ## Progress — `localStorage["tugalingo-progress"]`
 
 Written by `src/hooks/useProgress.js`, read back on every page load.

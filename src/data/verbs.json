@@ -1,0 +1,106 @@
+[
+  {
+    "id": "falar",
+    "en": "to speak",
+    "emoji": "🗣️",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "falo" },
+      "tu": { "pronoun": "Tu", "form": "falas" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "fala" },
+      "nos": { "pronoun": "Nós", "form": "falamos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "falam" }
+    }
+  },
+  {
+    "id": "comprar",
+    "en": "to buy",
+    "emoji": "🛍️",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "compro" },
+      "tu": { "pronoun": "Tu", "form": "compras" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "compra" },
+      "nos": { "pronoun": "Nós", "form": "compramos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "compram" }
+    }
+  },
+  {
+    "id": "morar",
+    "en": "to live",
+    "emoji": "🏠",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "moro" },
+      "tu": { "pronoun": "Tu", "form": "moras" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "mora" },
+      "nos": { "pronoun": "Nós", "form": "moramos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "moram" }
+    }
+  },
+  {
+    "id": "trabalhar",
+    "en": "to work",
+    "emoji": "💼",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "trabalho" },
+      "tu": { "pronoun": "Tu", "form": "trabalhas" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "trabalha" },
+      "nos": { "pronoun": "Nós", "form": "trabalhamos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "trabalham" }
+    }
+  },
+  {
+    "id": "estudar",
+    "en": "to study",
+    "emoji": "📚",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "estudo" },
+      "tu": { "pronoun": "Tu", "form": "estudas" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "estuda" },
+      "nos": { "pronoun": "Nós", "form": "estudamos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "estudam" }
+    }
+  },
+  {
+    "id": "cantar",
+    "en": "to sing",
+    "emoji": "🎤",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "canto" },
+      "tu": { "pronoun": "Tu", "form": "cantas" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "canta" },
+      "nos": { "pronoun": "Nós", "form": "cantamos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "cantam" }
+    }
+  },
+  {
+    "id": "dancar",
+    "en": "to dance",
+    "emoji": "💃",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "danço" },
+      "tu": { "pronoun": "Tu", "form": "danças" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "dança" },
+      "nos": { "pronoun": "Nós", "form": "dançamos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "dançam" }
+    }
+  },
+  {
+    "id": "cozinhar",
+    "en": "to cook",
+    "emoji": "🍳",
+    "level": 1,
+    "conjugations": {
+      "eu": { "pronoun": "Eu", "form": "cozinho" },
+      "tu": { "pronoun": "Tu", "form": "cozinhas" },
+      "ele_ela": { "pronoun": "Ele/Ela", "form": "cozinha" },
+      "nos": { "pronoun": "Nós", "form": "cozinhamos" },
+      "eles_elas": { "pronoun": "Eles/Elas", "form": "cozinham" }
+    }
+  }
+]

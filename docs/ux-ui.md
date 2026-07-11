@@ -28,14 +28,27 @@ Top bar, left to right:
 - **Progress bar** — fills based on `question index / total questions for this lesson`. Because the total can change (10 → 12 or 14) partway through, the bar's denominator updates the moment the lesson extends, rather than jumping or resetting.
 - **🔥 in-lesson streak** — consecutive correct answers *within this lesson only*. This is a different number from the home screen's day-streak (same fire emoji, different meaning: one is about right answers in a row, the other about consecutive days played) — resets every lesson, never persisted.
 
-Below that: the emoji prompt, then four word options in a 2×2 grid.
+Below that, the prompt and answer UI vary by question type (see [design.md](design.md#question-types) for what unlocks when):
+
+- **`emoji-match`** — the emoji prompt, then four word options in a 2×2 grid (as above).
+- **`reverse-match`** — the mirror image: the word (with article + gender badge) is shown large where the emoji usually is, and the four options are big emoji buttons instead of word buttons.
+
+  ![Reverse match](images/screen-reverse-match.png)
+
+- **`type-in`** — the emoji prompt, but instead of a 2×2 grid there's a single text field and a "Check" button; Enter submits too.
+
+  ![Type in](images/screen-type-in.png)
+
+- **`sentence-fill`** — an emoji sets the scene, with a one-line sentence below it (a pronoun, a blank, a period — e.g. *"Ele/Ela ____."*), and four conjugated-verb-form buttons.
+
+  ![Sentence fill](images/screen-sentence-fill.png)
 
 ## State: correct / incorrect answer
 
 ![Correct feedback](images/screen-correct-feedback.png)
 ![Incorrect feedback](images/screen-incorrect-feedback.png)
 
-The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms.
+The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
 
 ## Screen: lesson results
 

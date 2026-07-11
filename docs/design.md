@@ -11,6 +11,31 @@ A long lesson curriculum (translate a sentence, pick from a word bank, listen an
 3. Player picks one. Correct = green highlight, in-lesson streak goes up. Incorrect = the picked option turns red, the correct one turns green, streak resets to 0.
 4. After ~900ms, the next round starts (or the lesson ends — see below).
 
+## Question types
+
+"Match single emoji to gendered word" is one *question type*, not the only shape this game can take. Question types are a registry: each is a self-contained pair of a data generator (`src/lib/questionTypes/`) and a renderer (`src/components/questions/`), looked up by a `type` string. `Lesson.jsx` runs the round loop (progress bar, extend rule, in-lesson streak) without knowing or caring what kind of question it's showing, so adding a type is additive — a new file plus one registry line — rather than a rewrite of the lesson loop. See [architecture.md](architecture.md#question-types) for the file layout and [data-model.md](data-model.md#question-schema) for the exact `Question`/`Answer` shape.
+
+Four types exist:
+
+- **`emoji-match`** — the original mechanic (see [above](#core-round-loop)). Recognition: see a concept, pick the word.
+- **`reverse-match`** — the mirror: the word is the prompt, four emoji are the choices. This is recall rather than recognition (harder — you can't lean on eliminating obviously-wrong emoji the way you can eliminate obviously-wrong words), so it's unlocked a little after `emoji-match`.
+- **`type-in`** — an emoji prompt again, but the player types the Portuguese word instead of picking it. Production instead of recognition, which is a bigger jump in difficulty than `reverse-match` — get it right without four options to narrow it down. Checked accent- and case-insensitively (`typeIn.js`'s `normalize()`), so a learner without easy access to ã/ç/õ on their keyboard isn't marked wrong for the accent alone, only for the word itself.
+- **`sentence-fill`** — verb conjugation (see below).
+
+### Question types unlock gradually
+
+None of the three newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `type-in` after 5, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
+
+## Verb conjugation, via sentence-fill
+
+Conjugation (*eu falo*, *tu falas*, *ele fala*...) has no natural emoji representation on its own — an emoji can point at "speaking" but not at "the second-person-singular present-tense form of speak." That's still true, and it's why conjugation isn't bolted onto `emoji-match`. Instead, `sentence-fill` gives it a minimal sentence frame it can live in: an emoji sets the scene (🗣️), a pronoun is shown as text (*Tu*), and the player picks the matching conjugated form from four choices — `[falo, falas, fala, falamos]`.
+
+The four choices are deliberately drawn from *the same verb's other persons*, not from unrelated verbs. That's the actual skill being tested — subject-verb agreement — rather than "which verb was that emoji." Picking `fala` when the sentence says `Tu ___` should feel wrong the way subject-verb mismatches feel wrong once the pattern clicks, and that only happens if the distractors are real near-misses.
+
+Content is deliberately narrow for now (`src/data/verbs.json`): present tense only, and only regular `-ar` verbs (*falar, comprar, morar, trabalhar, estudar, cantar, dançar, cozinhar*) — by far the most regular conjugation pattern, so the first exposure to conjugation is to the pattern that generalizes best, before `-er`/`-ir` verbs or irregulars (*ser, estar, ter*...) get added. The pronoun set is `eu / tu / ele-ela / nós / eles-elas` — no *vós*, since that's archaic outside a few regions — and `tu` is included deliberately: European Portuguese uses *tu* informally where Brazilian Portuguese would default to *você* (which conjugates like *ele/ela*), so including it is part of what keeps this game's Portuguese distinctly European rather than generic.
+
+No English gloss is shown for the verb, matching the "no translation step" philosophy from [above](#why-emoji-matching) — the emoji plus the recurring, small set of pronouns is meant to be enough context, the same way the four-word-choice emoji-match round never shows English either.
+
 ## Lesson length and the extend rule
 
 Lessons are the unit of play, not an endless stream — this is the core change from the original free-play version, and it's what makes "how many lessons has she done" and "how many did she get right" meaningful things to track.
@@ -54,13 +79,9 @@ The goal here is explicitly to create daily pressure — the player should feel 
 
 A lesson only counts for the streak/heatmap if it's completed — see [above](#new-lesson-not-a-lesson-tree) on why quitting mid-lesson doesn't count.
 
-## Why verb conjugation is out of scope for this mode
-
-Conjugation (*eu como*, *tu comes*, *ele come*...) has no natural emoji representation — an emoji can point at "eating" but not at "the second-person-singular present-tense form of eat." Forcing it into the matching format would mean showing the same 🍽️ emoji for six different correct answers depending on an invisible subject, which breaks the one-emoji-one-answer contract the whole game is built on. This was a deliberate scope cut, not an oversight. If verb practice gets added later, it should be a distinct mode (e.g. fill-in-the-blank with a subject pronoun shown), not a variant of emoji matching.
-
 ## Non-goals for v1
 
 - No audio/pronunciation.
-- No sentence-level content (single words only).
 - No accounts — see [architecture.md](architecture.md#why-no-backend).
 - No lives/hearts system — an incorrect answer costs streak, not a life, since there's no "game over" state to protect against.
+- No irregular verbs or tenses beyond present-tense regular `-ar` — see [above](#verb-conjugation-via-sentence-fill).

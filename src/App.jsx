@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useProgress } from './hooks/useProgress'
 import { currentStreak, dateKey } from './lib/dates'
-import { currentWordPool } from './lib/lessons'
+import { buildLessonContext, activeQuestionTypes } from './lib/lessons'
 import Lesson from './components/Lesson'
 import Home from './components/Home'
 import LessonResults from './components/LessonResults'
@@ -12,7 +12,11 @@ function App() {
   const [view, setView] = useState({ screen: 'home' })
 
   function startLesson() {
-    setView({ screen: 'lesson', pool: currentWordPool(progress) })
+    setView({
+      screen: 'lesson',
+      context: buildLessonContext(progress),
+      questionTypes: activeQuestionTypes(progress),
+    })
   }
 
   function completeLesson(result) {
@@ -36,7 +40,12 @@ function App() {
   if (view.screen === 'lesson') {
     return (
       <div className="app">
-        <Lesson pool={view.pool} onExit={() => setView({ screen: 'home' })} onComplete={completeLesson} />
+        <Lesson
+          context={view.context}
+          questionTypes={view.questionTypes}
+          onExit={() => setView({ screen: 'home' })}
+          onComplete={completeLesson}
+        />
       </div>
     )
   }

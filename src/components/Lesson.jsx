@@ -1,23 +1,29 @@
 import { useState } from 'react'
-import { BASE_QUESTIONS, EXTEND_THRESHOLD, EXTENDED_TOTAL } from '../lib/lessons'
-import { pickRound } from '../lib/round'
-import OptionButton from './OptionButton'
+import {
+  BASE_QUESTIONS,
+  EXTEND_THRESHOLD,
+  EXTENDED_TOTAL,
+  DEFAULT_QUESTION_TYPES,
+  pickQuestionType,
+} from '../lib/lessons'
+import { generateQuestion, checkAnswer } from '../lib/questionTypes'
+import QuestionRenderer from './questions'
 
-export default function Lesson({ pool, onComplete, onExit }) {
+export default function Lesson({ context, questionTypes = DEFAULT_QUESTION_TYPES, onComplete, onExit }) {
   const [index, setIndex] = useState(0)
   const [totalQuestions, setTotalQuestions] = useState(BASE_QUESTIONS)
   const [correctCount, setCorrectCount] = useState(0)
   const [streak, setStreak] = useState(0)
-  const [round, setRound] = useState(() => pickRound(pool))
+  const [question, setQuestion] = useState(() => generateQuestion(pickQuestionType(questionTypes), context))
   const [feedback, setFeedback] = useState(null)
 
-  function handleChoice(option) {
+  function handleAnswer(answer) {
     if (feedback) return
-    const correct = option.id === round.target.id
+    const correct = checkAnswer(question, answer)
     const newCorrectCount = correct ? correctCount + 1 : correctCount
     setCorrectCount(newCorrectCount)
     setStreak(correct ? streak + 1 : 0)
-    setFeedback({ correct, selectedId: option.id })
+    setFeedback({ correct, answer })
 
     setTimeout(() => {
       const nextIndex = index + 1
@@ -31,7 +37,7 @@ export default function Lesson({ pool, onComplete, onExit }) {
         return
       }
       setIndex(nextIndex)
-      setRound(pickRound(pool, round.target.id))
+      setQuestion(generateQuestion(pickQuestionType(questionTypes), context, question.wordId))
       setFeedback(null)
     }, 900)
   }
@@ -53,19 +59,7 @@ export default function Lesson({ pool, onComplete, onExit }) {
         </span>
       </div>
 
-      <div className="emoji-display">{round.target.emoji}</div>
-
-      <div className="options">
-        {round.options.map((option) => (
-          <OptionButton
-            key={option.id}
-            option={option}
-            feedback={feedback}
-            isTarget={option.id === round.target.id}
-            onClick={() => handleChoice(option)}
-          />
-        ))}
-      </div>
+      <QuestionRenderer question={question} feedback={feedback} onAnswer={handleAnswer} />
     </div>
   )
 }

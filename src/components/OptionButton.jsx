@@ -1,10 +1,11 @@
+import { optionClassName } from './questions/optionClassName'
+
 export default function OptionButton({ option, feedback, isTarget, onClick }) {
-  let className = 'option'
-  if (feedback) {
-    if (isTarget) className += ' option--correct'
-    else if (feedback.selectedId === option.id) className += ' option--incorrect'
-    else className += ' option--disabled'
-  }
+  const className = optionClassName({
+    isTarget,
+    isSelected: feedback?.selectedId === option.id,
+    hasFeedback: !!feedback,
+  })
 
   return (
     <button className={className} onClick={onClick} disabled={!!feedback}>
