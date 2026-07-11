@@ -175,6 +175,19 @@
   padding: 24px;
 }
 
+.compound-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+.compound-display__emoji {
+  font-size: 64px;
+  line-height: 1;
+}
+
 .options {
   width: 100%;
   display: grid;

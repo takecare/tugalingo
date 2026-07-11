@@ -1,0 +1,38 @@
+[
+  {
+    "id": "galao",
+    "pt": "galão",
+    "en": "coffee with a lot of milk, served in a tall glass (like a latte)",
+    "article": "o",
+    "gender": "m",
+    "emojis": ["☕", "🥛", "🥛"],
+    "level": 1
+  },
+  {
+    "id": "meia-de-leite",
+    "pt": "meia de leite",
+    "en": "half coffee, half milk (like a flat white)",
+    "article": "a",
+    "gender": "f",
+    "emojis": ["☕", "🥛"],
+    "level": 1
+  },
+  {
+    "id": "sumo-de-laranja",
+    "pt": "sumo de laranja",
+    "en": "orange juice",
+    "article": "o",
+    "gender": "m",
+    "emojis": ["🍊", "🧃"],
+    "level": 1
+  },
+  {
+    "id": "pao-com-manteiga",
+    "pt": "pão com manteiga",
+    "en": "bread with butter",
+    "article": "o",
+    "gender": "m",
+    "emojis": ["🍞", "🧈"],
+    "level": 1
+  }
+]

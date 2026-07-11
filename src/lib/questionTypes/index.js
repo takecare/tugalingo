@@ -2,6 +2,7 @@ import * as emojiMatch from './emojiMatch'
 import * as reverseMatch from './reverseMatch'
 import * as typeIn from './typeIn'
 import * as sentenceFill from './sentenceFill'
+import * as compoundMatch from './compoundMatch'
 
 // Registry of question types. Add a new module (generate + isCorrect, see
 // emojiMatch.js) and register it here to make it available to lessons —
@@ -11,6 +12,7 @@ const registry = {
   [reverseMatch.type]: reverseMatch,
   [typeIn.type]: typeIn,
   [sentenceFill.type]: sentenceFill,
+  [compoundMatch.type]: compoundMatch,
 }
 
 export function generateQuestion(type, context, avoidWordId) {

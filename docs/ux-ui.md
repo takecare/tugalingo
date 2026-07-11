@@ -30,10 +30,14 @@ Top bar, left to right:
 
 Below that, the prompt and answer UI vary by question type (see [design.md](design.md#question-types) for what unlocks when):
 
-- **`emoji-match`** — the emoji prompt, then four word options in a 2×2 grid (as above).
+- **`emoji-match`** — the emoji prompt, then four word options in a 2×2 grid (as above). The emoji shown can vary between attempts if the word has more than one valid one (a cat question might show 🐱 one time, 🐈 the next) — see [design.md](design.md#emoji-variants).
 - **`reverse-match`** — the mirror image: the word (with article + gender badge) is shown large where the emoji usually is, and the four options are big emoji buttons instead of word buttons.
 
   ![Reverse match](images/screen-reverse-match.png)
+
+- **`compound-match`** — a short row of 2-3 emoji together as the prompt (e.g. a coffee cup next to two milk glasses), then four word/phrase options in the same 2×2 grid as `emoji-match`.
+
+  ![Compound match](images/screen-compound-match.png)
 
 - **`type-in`** — the emoji prompt, but instead of a 2×2 grid there's a single text field and a "Check" button; Enter submits too.
 
@@ -48,7 +52,7 @@ Below that, the prompt and answer UI vary by question type (see [design.md](desi
 ![Correct feedback](images/screen-correct-feedback.png)
 ![Incorrect feedback](images/screen-incorrect-feedback.png)
 
-The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
+The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `compound-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
 
 ## Screen: lesson results
 

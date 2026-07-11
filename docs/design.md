@@ -15,16 +15,29 @@ A long lesson curriculum (translate a sentence, pick from a word bank, listen an
 
 "Match single emoji to gendered word" is one *question type*, not the only shape this game can take. Question types are a registry: each is a self-contained pair of a data generator (`src/lib/questionTypes/`) and a renderer (`src/components/questions/`), looked up by a `type` string. `Lesson.jsx` runs the round loop (progress bar, extend rule, in-lesson streak) without knowing or caring what kind of question it's showing, so adding a type is additive — a new file plus one registry line — rather than a rewrite of the lesson loop. See [architecture.md](architecture.md#question-types) for the file layout and [data-model.md](data-model.md#question-schema) for the exact `Question`/`Answer` shape.
 
-Four types exist:
+Five types exist:
 
 - **`emoji-match`** — the original mechanic (see [above](#core-round-loop)). Recognition: see a concept, pick the word.
 - **`reverse-match`** — the mirror: the word is the prompt, four emoji are the choices. This is recall rather than recognition (harder — you can't lean on eliminating obviously-wrong emoji the way you can eliminate obviously-wrong words), so it's unlocked a little after `emoji-match`.
+- **`compound-match`** — multiple emoji together as one prompt, for concepts a single emoji can't represent (see [below](#compound-concepts-via-compound-match)).
 - **`type-in`** — an emoji prompt again, but the player types the Portuguese word instead of picking it. Production instead of recognition, which is a bigger jump in difficulty than `reverse-match` — get it right without four options to narrow it down. Checked accent- and case-insensitively (`typeIn.js`'s `normalize()`), so a learner without easy access to ã/ç/õ on their keyboard isn't marked wrong for the accent alone, only for the word itself.
 - **`sentence-fill`** — verb conjugation (see below).
 
 ### Question types unlock gradually
 
-None of the three newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `type-in` after 5, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
+None of the newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `compound-match` after 4, `type-in` after 5, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `compound-match` introduces new but small content that's more fun once the basic prompt-then-choose pattern is familiar; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
+
+## Emoji variants
+
+Some concepts have more than one commonly-used emoji — a cat is just as much 🐱 as 🐈. Rather than pick one and stick with it, words that have a genuinely equivalent alternate list it in `emojiVariants` (`src/data/words.json`), and `pickEmoji(word)` (`src/lib/emoji.js`) picks at random between `emoji` and its variants *every time that word comes up*, across `emoji-match`, `reverse-match`, and `type-in`. The point is to stop the player from quietly memorizing "this exact glyph = this word" instead of "this concept = this word" — if 🐱 and 🐈 don't both mean *gato* to her, she hasn't really learned *gato*, she's learned to recognize one drawing.
+
+This is deliberately conservative: a variant has to be unambiguously the *same* word, not just a related one. 🐱/🐈 (cat) and 🍎/🍏 (apple, red or green) qualify; a polar bear emoji does not become a variant of `urso` (bear), because that arguably names a different animal in Portuguese too. When a word has no genuinely equivalent second emoji, it just doesn't get an `emojiVariants` list — most words in the bank are still single-emoji.
+
+## Compound concepts, via compound-match
+
+Some vocabulary only exists as a *combination*, not as a single word attached to a single emoji: ☕ alone is *café*, but ☕ next to 🥛 isn't "coffee and milk" as separate ideas, it's a specific drink with its own name and its own emoji arrangement. European Portuguese distinguishes these by how much milk there is — *galão* (a lot of milk, served tall, like a latte) vs. *meia de leite* (half and half, like a flat white) — which is exactly the kind of real, useful vocabulary a single-emoji format can't reach.
+
+`compound-match` (`src/data/compounds.json`) shows a short row of 2-3 emoji as one prompt (e.g. `☕ 🥛 🥛`) and asks for the word/phrase, multiple choice, the same as `emoji-match`. The repetition and ordering of emoji is meaningful and has to be unique per entry — see [data-model.md](data-model.md#compound-bank--srcdatacompoundsjson) for why two compounds can never share an emoji sequence. The bank starts small (four entries: `galão`, `meia de leite`, `sumo de laranja`, `pão com manteiga`) and is meant to grow the same way `words.json` and `verbs.json` did — one hand-picked, unambiguous combination at a time.
 
 ## Verb conjugation, via sentence-fill
 
@@ -58,7 +71,7 @@ There's no lesson map, no numbered lessons, no unlocking one lesson by finishing
 
 Words are tagged `level: 1` or `level: 2` in the word bank. The first 3 lessons ever completed draw only from level-1 words; from the 4th completed lesson onward, the pool includes both levels combined (`currentWordPool` in `src/lib/lessons.js`, keyed off how many lessons are in the player's history so far). Adding a `level: 3` tier to `words.json` would extend the ramp further by adjusting the threshold in that same function.
 
-The `category` field (`food`/`animals`) is still on every word but isn't used for gating — there's one mixed pool rather than per-category tracks, so category is just descriptive metadata for now (useful if a category-specific mode gets added later).
+The `category` field (`food`/`animals`/`drinks`/`everyday`) is on every word but isn't used for gating — there's one mixed pool rather than per-category tracks, so category is just descriptive metadata for now (useful if a category-specific mode gets added later).
 
 ## The gender badge mechanic
 

@@ -1,3 +1,5 @@
+import { pickEmoji } from '../emoji'
+
 // Free-text production instead of picking from choices: an emoji prompt, the
 // player types the Portuguese word. No `choices`/`correctChoiceIds` — the
 // answer is checked against `correctText` instead.
@@ -25,7 +27,7 @@ export function generate(context, avoidWordId) {
     type,
     wordId: target.id,
     title: 'Type the word',
-    body: { emoji: target.emoji },
+    body: { emoji: pickEmoji(target) },
     choices: [],
     correctChoiceIds: [],
     correctText: target.pt,

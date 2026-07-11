@@ -13,17 +13,18 @@ An array of word entries. Each entry:
 | `en` | string | `"apple"` | English translation — not shown in-game currently, kept for a possible future hint or a different game mode. |
 | `article` | `"o"` \| `"a"` | `"a"` | The definite article, shown alongside the word so the player learns noun + article together, not just the noun. |
 | `gender` | `"m"` \| `"f"` | `"f"` | Drives which badge (♂/♀) renders next to the word. |
-| `emoji` | string | `"🍎"` | The prompt shown to the player. |
-| `category` | string | `"food"` | Descriptive only — not currently used to gate which lesson a word appears in (see [design.md](design.md#word-difficulty-ramp)). Kept for a possible future category-specific lesson track. |
+| `emoji` | string | `"🍎"` | The default prompt shown to the player. |
+| `emojiVariants` | array of string *(optional)* | `["🍏"]` | Other emoji that are equally valid for this word — e.g. a cat has `🐱` as `emoji` and `🐈` as a variant. `pickEmoji(word)` (`src/lib/emoji.js`) picks uniformly at random from `[emoji, ...emojiVariants]` each time the word is asked, so the player learns the word maps to the *concept*, not to one specific glyph. Omitted entirely for words with only one sensible emoji. |
+| `category` | string | `"food"` | Descriptive only — not currently used to gate which lesson a word appears in (see [design.md](design.md#word-difficulty-ramp)). Kept for a possible future category-specific lesson track. Current categories: `food`, `animals`, `drinks`, `everyday`. |
 | `level` | number | `1` | Determines which lessons a word can appear in — see below. Currently `1` or `2`. |
 
 Example entry:
 
 ```json
-{ "id": "maca", "pt": "maçã", "en": "apple", "article": "a", "gender": "f", "emoji": "🍎", "category": "food", "level": 1 }
+{ "id": "gato", "pt": "gato", "en": "cat", "article": "o", "gender": "m", "emoji": "🐱", "emojiVariants": ["🐈"], "category": "animals", "level": 1 }
 ```
 
-**Adding a word** is just appending an object with these 8 fields — no schema/migration to run since it's a static file.
+**Adding a word** is just appending an object with these fields (`emojiVariants` optional) — no schema/migration to run since it's a static file. Picking a *second* emoji for `emojiVariants` is a judgment call: it needs to be unambiguously the same word (🐱/🐈 are both just "cat"; a polar bear emoji would *not* be a valid variant for `urso`, since that's arguably a different word) — see [design.md](design.md#question-types) for more on this.
 
 ### How `level` maps to lessons
 
@@ -74,6 +75,22 @@ Example entry:
 
 **Adding a verb** is appending one of these objects — only regular `-ar` verbs fit the current content without changes; an irregular verb would still work data-wise (the five forms are just spelled out, not derived), it's only a curation choice to stick to regulars for now (see [design.md](design.md#question-types)).
 
+## Compound bank — `src/data/compounds.json`
+
+An array of concepts that only exist as a *combination* of emoji, used by the `compound-match` question type — e.g. coffee (☕) plus milk (🥛) isn't just "coffee and milk," it's a specific drink with its own Portuguese name (see [design.md](design.md#question-types) for why this needed its own content and question type rather than reusing `words.json`).
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `id` | string | `"galao"` | Stable, unique, ASCII — hyphens from the Portuguese phrase are just dropped (`"meia de leite"` → `"meia-de-leite"`). |
+| `pt` | string | `"galão"` | The Portuguese word or phrase for the combined concept. |
+| `en` | string | `"coffee with a lot of milk..."` | English gloss, for readability of this file only (not shown in-game, same as `verbs.json`'s `en`). |
+| `article` | `"o"` \| `"a"` | `"o"` | Same role as a word's `article` — the head noun's gender, e.g. *o* galão, *a* meia de leite. |
+| `gender` | `"m"` \| `"f"` | `"m"` | Same role as a word's `gender`. |
+| `emojis` | array of string | `["☕", "🥛", "🥛"]` | The full prompt, shown together as one row — order and repetition matter (`galão`'s two 🥛 vs. `meia de leite`'s one is what visually distinguishes "a lot of milk" from "half milk"). |
+| `level` | number | `1` | Same ramp mechanism as `words.json`. |
+
+**Every compound in the bank must have a distinct `emojis` sequence.** Since the emoji sequence is the *entire* prompt (no text hint), two compounds that render the same sequence would make the "correct" choice arbitrary — this is the reason `garoto` (espresso with a dash of milk) isn't in the bank yet: it's visually indistinguishable from `meia de leite` using only 1x ☕ + 1x 🥛.
+
 ## Question schema
 
 `src/lib/questionTypes/` generates one of these per round, and `src/components/questions/` renders it — see [architecture.md](architecture.md#question-types) for how the registries plug together. Every question type produces a `Question` object with this shape (some fields only make sense for multiple-choice types; `type-in` leaves `choices`/`correctChoiceIds` empty and checks against `correctText` instead):
@@ -82,10 +99,10 @@ Example entry:
 |---|---|---|---|
 | `id` | string | `"maca"` | Unique per question instance — used as the React key for the current round (`sentence-fill`'s is `"<verbId>-<person>"` since the same verb can produce multiple distinct questions). |
 | `type` | string | `"emoji-match"` | Which registry entry generated/renders this question. |
-| `wordId` | string | `"maca"` | The underlying `words.json`/`verbs.json` entry this question is about — used to avoid repeating the same word or verb twice in a row. |
+| `wordId` | string | `"maca"` | The underlying `words.json`/`verbs.json`/`compounds.json` entry this question is about — used to avoid repeating the same word, verb, or compound twice in a row. |
 | `title` | string | `"Match the word"` | Short description of the exercise; not currently rendered by any renderer but available for a type whose prompt needs framing. |
-| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`. |
-| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` choices are `{ id, label }` (the conjugated form text). Empty for `type-in`. |
+| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`; `compound-match`'s is `{ emojis: [...] }` (plural — the whole sequence). |
+| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` choices are `{ id, label }` (the conjugated form text); `compound-match` choices are the same `{ id, article, pt, gender }` shape as `emoji-match`. Empty for `type-in`. |
 | `correctChoiceIds` | array of string | `["maca"]` | Which `choices[].id`(s) are correct — an array rather than a single id so a future type can have more than one right answer. Empty for `type-in`. |
 | `correctText` | string | *(only on `type-in`)* | What the player's normalized input is compared against — see `typeIn.js`'s `normalize()` for the accent/case-insensitive comparison. |
 

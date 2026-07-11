@@ -1,4 +1,5 @@
 import { pickRound } from '../round'
+import { pickEmoji } from '../emoji'
 
 // The original question type: an emoji prompt, four gendered-word choices,
 // one correct.
@@ -11,7 +12,7 @@ export function generate(context, avoidWordId) {
     type,
     wordId: target.id,
     title: 'Match the word',
-    body: { emoji: target.emoji },
+    body: { emoji: pickEmoji(target) },
     choices: options.map((w) => ({ id: w.id, article: w.article, pt: w.pt, gender: w.gender })),
     correctChoiceIds: [target.id],
   }
