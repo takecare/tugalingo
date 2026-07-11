@@ -1,6 +1,6 @@
 # tugalingo
 
-A small European Portuguese vocabulary game: match an emoji to the Portuguese word for it. Built as a focused learning tool, not a Duolingo clone — see [docs/design.md](docs/design.md) for why.
+A small European Portuguese vocabulary game: match an emoji to the Portuguese word for it. Built as a focused, standalone learning tool — see [docs/design.md](docs/design.md) for the design decisions behind it.
 
 ![Idle screen](docs/images/screen-idle.png)
 

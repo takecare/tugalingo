@@ -2,7 +2,7 @@
 
 ## Visual style
 
-Deliberately plain: white background, one accent color (purple), system font. The point was to avoid an accidental Duolingo skin — no owl mascot, no green/blue palette, no rounded-lesson-path map. Everything is a single screen; there's no navigation to get lost in.
+Deliberately plain: white background, one accent color (purple), system font, no mascot. Everything is a single screen; there's no navigation to get lost in.
 
 Theme variables (`src/index.css`) already support dark mode via `prefers-color-scheme`, inherited from the Vite template — not custom-built for this project, but free to keep.
 

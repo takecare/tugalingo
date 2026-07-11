@@ -1,8 +1,8 @@
 # Game design
 
-## Why not a Duolingo clone
+## Why emoji matching
 
-Duolingo's core loop (translate a sentence, pick from a word bank, listen and type) is built to teach grammar and sentence structure over a long curriculum. That's more infrastructure than a two-person learning game needs, and it's not the goal here — the goal is fast, low-friction vocabulary acquisition. Emoji-matching was picked because it removes English entirely from the round: the player goes straight from *concept* to *Portuguese word*, no translation step in between. Wordle-style games were the other inspiration point — short, single-serving rounds rather than a long lesson tree.
+A long lesson curriculum (translate a sentence, pick from a word bank, listen and type) is more infrastructure than a two-person learning game needs, and it's not the goal here — the goal is fast, low-friction vocabulary acquisition. Emoji-matching was picked because it removes English entirely from the round: the player goes straight from *concept* to *Portuguese word*, no translation step in between. Wordle-style games were the other inspiration point — short, single-serving rounds rather than a long lesson tree.
 
 ## Core loop
 
@@ -29,7 +29,7 @@ Words are tagged `food` or `animals`. The category picker just filters the activ
 
 ## Level unlock
 
-All words start at `level: 1`. Once lifetime `totalCorrect` reaches 8, `level: 2` words join the pool permanently (they don't replace level 1 — the pool becomes level 1 + 2 combined). This is a soft difficulty ramp rather than a hard lesson-gate like Duolingo's — the player never gets blocked, the pool just gets richer. The threshold (8) and the two-tier depth are deliberately simple for v1; see [data-model.md](data-model.md#word-bank--srcdatawordsjson) for how `level` is stored per word.
+All words start at `level: 1`. Once lifetime `totalCorrect` reaches 8, `level: 2` words join the pool permanently (they don't replace level 1 — the pool becomes level 1 + 2 combined). This is a soft difficulty ramp rather than a hard lesson-gate — the player never gets blocked, the pool just gets richer. The threshold (8) and the two-tier depth are deliberately simple for v1; see [data-model.md](data-model.md#word-bank--srcdatawordsjson) for how `level` is stored per word.
 
 ## Why verb conjugation is out of scope for this mode
 
