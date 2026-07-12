@@ -24,6 +24,8 @@ Other commands:
 ```bash
 npm run build     # production build into dist/
 npm run preview   # serve the production build locally to sanity-check it
+npm test          # run the test suite once
+npm run test:watch  # re-run tests on file changes
 ```
 
 ## Deploying

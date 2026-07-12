@@ -65,6 +65,16 @@ A lesson is 10 questions minimum. At question 10, the running correct-count deci
 
 `Home.jsx` wires these to a hidden file `<input>` and a native `window.confirm()` (the only confirmation dialog in the app, since import is the only destructive action — it fully replaces `progress` via `replaceProgress`). See [data-model.md](data-model.md#progress-file-import--export) for the exact validation rules and [ux-ui.md](ux-ui.md#export--import-progress) for the UI.
 
+## Tests
+
+Everything under `src/lib/` (and its `questionTypes/` subfolder) is plain, framework-free logic — no DOM, no React — which makes it straightforward to unit test in isolation with [Vitest](https://vitest.dev), without needing a browser or React Testing Library. Each module has a co-located `*.test.js` file (e.g. `src/lib/dates.test.js` next to `dates.js`).
+
+What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json` banks as an end-to-end sanity check that the actual content is well-formed.
+
+Deliberately not covered: React components (`src/components/`) and `progressFile.js`'s `downloadProgress` (needs a real DOM for `Blob`/`URL.createObjectURL`) — these are thin rendering/wiring layers verified manually in a real browser instead, since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
+
+`npm test` runs the suite once; `npm run test:watch` re-runs on file changes. CI (`.github/workflows/deploy.yml`) runs `npm test` before `npm run build`, so a broken test blocks deployment the same way a broken build would.
+
 ## Why no backend
 
 The two questions that usually justify a backend — "does progress need to sync across devices?" and "does someone need to log in?" — were both answered no. `useProgress.js` is the single seam to swap if that changes later: it already isolates all read/write of progress behind `progress`, `recordLessonCompletion`, and `replaceProgress`, so replacing `localStorage` with an API call wouldn't touch `Lesson.jsx`, `Home.jsx`, or `LessonResults.jsx`. Export/import (above) is the manual, no-backend stand-in for cross-device sync in the meantime.
@@ -113,3 +123,5 @@ src/
   App.css                       # all styling
   index.css                      # theme variables, base styles
 ```
+
+(Not shown above: every file directly under `lib/` and `lib/questionTypes/` has a co-located `*.test.js` — see [Tests](#tests).)
