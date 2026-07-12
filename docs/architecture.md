@@ -19,7 +19,7 @@
 - **`src/lib/emoji.js`** — `pickEmoji(word)` picks one emoji from a word's `emoji` plus any `emojiVariants` each time it's asked, so a word with more than one valid emoji (e.g. a cat) doesn't always show the same glyph.
 - **`src/lib/questionTypes/`** is the question-type registry — see [Question types](#question-types) below.
 - **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`).
-- **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `lastNDays`, and `currentStreak`.
+- **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `recentDays`, and `currentStreak`.
 - **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
 - **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
 - **`src/App.jsx`** is a tiny screen router with three states: `home`, `lesson`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
@@ -89,7 +89,7 @@ src/
       sentenceFill.js            # verb conjugation fill-in-the-blank
       index.js                    # question-type registry: generateQuestion(), checkAnswer()
     round.js               # pickRound() / shuffle()
-    dates.js                # dateKey(), lastNDays(), currentStreak()
+    dates.js                # dateKey(), recentDays(), currentStreak()
     progressFile.js          # downloadProgress(), parseProgressFile()
   components/
     Home.jsx                # home screen: streak + heatmap + New Lesson + export/import

@@ -5,7 +5,7 @@ export function dateKey(date = new Date()) {
   return `${y}-${m}-${d}`
 }
 
-export function lastNDays(n, endDate = new Date()) {
+export function recentDays(n, endDate = new Date()) {
   const days = []
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(endDate)

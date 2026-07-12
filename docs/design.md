@@ -88,7 +88,7 @@ The badge is redundant with the article on purpose — repetition of the same si
 The goal here is explicitly to create daily pressure — the player should feel like skipping a day costs them something, the same way Duolingo's streak does. Two things work together on the home screen:
 
 - **Streak** — the number of consecutive days with at least one completed lesson, shown large at the top (`🔥 N day streak`). If today hasn't had a lesson yet, the streak from yesterday is still shown as "alive" with a nudge ("Do a lesson today to keep your streak!") rather than immediately showing 0 — the streak only actually breaks once a day passes with nothing done. This is computed fresh from the activity history every time (`currentStreak` in `src/lib/dates.js`), not stored as its own number, so it can never drift out of sync with the underlying daily record.
-- **Activity heatmap** — the last 12 weeks, one cell per day, shaded by how many lessons were done. This is the memory the streak number doesn't have: a broken streak still leaves a visible record of everything before the gap, rather than erasing it. The streak creates the daily pressure; the heatmap is the honest longer-term picture underneath it.
+- **Activity heatmap** — the last 30 days, one cell per day, shaded by how many lessons were done, wrapped into rows of 7 with today always the last cell. This is the memory the streak number doesn't have: a broken streak still leaves a visible record of everything before the gap, rather than erasing it. The streak creates the daily pressure; the heatmap is the honest longer-term picture underneath it.
 
 A lesson only counts for the streak/heatmap if it's completed — see [above](#new-lesson-not-a-lesson-tree) on why quitting mid-lesson doesn't count.
 

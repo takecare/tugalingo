@@ -135,12 +135,12 @@
 
 .heatmap__grid {
   display: flex;
+  flex-direction: column;
   gap: 3px;
 }
 
-.heatmap__week {
+.heatmap__row {
   display: flex;
-  flex-direction: column;
   gap: 3px;
 }
 

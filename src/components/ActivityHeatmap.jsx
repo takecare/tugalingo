@@ -1,7 +1,7 @@
-import { dateKey, lastNDays } from '../lib/dates'
+import { dateKey, recentDays } from '../lib/dates'
 
-const WEEKS = 12
-const DAYS = WEEKS * 7
+const DAYS = 30
+const COLUMNS = 7
 
 function levelFor(count) {
   if (!count) return 0
@@ -13,22 +13,24 @@ function levelFor(count) {
 export default function ActivityHeatmap({ activityByDate }) {
   const today = new Date()
   const todayKey = dateKey(today)
-  const days = lastNDays(DAYS, today)
+  const days = recentDays(DAYS, today)
 
-  // Pad the front so the first column starts on a Sunday, like GitHub's graph.
-  const padding = Array.from({ length: days[0].getDay() }, () => null)
+  // Pad the front (not the end) so today is always the very last cell —
+  // consecutive rows are exactly 7 days apart, so each column still lines up
+  // with one consistent weekday throughout, ending on today's weekday.
+  const padding = Array.from({ length: (COLUMNS - (days.length % COLUMNS)) % COLUMNS }, () => null)
   const cells = [...padding, ...days]
-  const weeks = []
-  for (let i = 0; i < cells.length; i += 7) {
-    weeks.push(cells.slice(i, i + 7))
+  const rows = []
+  for (let i = 0; i < cells.length; i += COLUMNS) {
+    rows.push(cells.slice(i, i + COLUMNS))
   }
 
   return (
     <div className="heatmap">
       <div className="heatmap__grid">
-        {weeks.map((week, wi) => (
-          <div className="heatmap__week" key={wi}>
-            {week.map((day, di) => {
+        {rows.map((row, ri) => (
+          <div className="heatmap__row" key={ri}>
+            {row.map((day, di) => {
               if (!day) return <div className="heatmap__cell heatmap__cell--empty" key={di} />
               const key = dateKey(day)
               const count = activityByDate[key]?.lessonsCompleted ?? 0
