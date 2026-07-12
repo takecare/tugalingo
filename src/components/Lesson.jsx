@@ -59,7 +59,9 @@ export default function Lesson({ context, questionTypes = DEFAULT_QUESTION_TYPES
         </span>
       </div>
 
-      <QuestionRenderer question={question} feedback={feedback} onAnswer={handleAnswer} />
+      <div className="question-enter" key={index}>
+        <QuestionRenderer question={question} feedback={feedback} onAnswer={handleAnswer} />
+      </div>
     </div>
   )
 }

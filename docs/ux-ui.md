@@ -79,5 +79,5 @@ A single "Continue" button returns home, where the streak, heatmap, and lifetime
 ## Interaction notes
 
 - The 900ms delay between answering and the next round is a fixed constant in `Lesson.jsx` — long enough to read the correction, short enough that even a 14-question lesson doesn't feel padded.
-- No animation library — color transitions are a plain CSS `transition` on `border-color`/`background` (see `src/App.css`).
+- No animation library — color transitions are a plain CSS `transition` on `border-color`/`background`, and the next-question reveal is a plain CSS `@keyframes` fade-and-rise (`.question-enter` in `src/App.css`) triggered by giving the question wrapper a new `key` (the question index) each time `Lesson.jsx` advances — no JS animation logic, React just remounts the element and the CSS plays on mount. Respects `prefers-reduced-motion: reduce`.
 - The home screen and results screen both read from the same `progress` object returned by `useProgress()` — there's no separate "refresh" step; finishing a lesson updates state once and every screen that depends on it re-renders from that.
