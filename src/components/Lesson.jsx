@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   BASE_QUESTIONS,
   EXTEND_THRESHOLD,
@@ -16,6 +16,12 @@ export default function Lesson({ context, questionTypes = DEFAULT_QUESTION_TYPES
   const [streak, setStreak] = useState(0)
   const [question, setQuestion] = useState(() => generateQuestion(pickQuestionType(questionTypes), context))
   const [feedback, setFeedback] = useState(null)
+
+  // A lesson extending past 10 questions grows the denominator, which would
+  // otherwise make the bar visibly jump backwards (e.g. 10/10 -> 10/12).
+  // Track the highest fraction shown so far so it only ever holds or grows.
+  const maxProgressRef = useRef(0)
+  maxProgressRef.current = Math.max(maxProgressRef.current, index / totalQuestions)
 
   function handleAnswer(answer) {
     if (feedback) return
@@ -51,7 +57,7 @@ export default function Lesson({ context, questionTypes = DEFAULT_QUESTION_TYPES
         <div className="lesson__progress-bar">
           <div
             className="lesson__progress-fill"
-            style={{ width: `${(index / totalQuestions) * 100}%` }}
+            style={{ width: `${maxProgressRef.current * 100}%` }}
           />
         </div>
         <span className="lesson__streak" title="Current streak">

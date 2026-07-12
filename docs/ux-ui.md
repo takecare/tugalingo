@@ -36,7 +36,7 @@ See [architecture.md](architecture.md#why-no-backend) and [data-model.md](data-m
 
 Top bar, left to right:
 - **✕ exit** — leaves the lesson and returns home *without recording anything* — no partial credit, no streak/heatmap update. There's no confirmation dialog; abandoning a lesson has no cost beyond the time spent, since nothing is saved until it's completed.
-- **Progress bar** — fills based on `question index / total questions for this lesson`. Because the total can change (10 → 12 or 14) partway through, the bar's denominator updates the moment the lesson extends, rather than jumping or resetting.
+- **Progress bar** — fills based on `question index / total questions for this lesson`. Because the total can grow (10 → 12 or 14) partway through, that fraction alone would make the bar jump backwards right when a lesson extends (e.g. 10/10 → 10/12); `Lesson.jsx` tracks the highest fraction shown so far and never lets the displayed width drop below it, so the bar holds steady through the extend point and only resumes climbing once real progress catches back up.
 - **🔥 in-lesson streak** — consecutive correct answers *within this lesson only*. This is a different number from the home screen's day-streak (same fire emoji, different meaning: one is about right answers in a row, the other about consecutive days played) — resets every lesson, never persisted.
 
 Below that, the prompt and answer UI vary by question type (see [design.md](design.md#question-types) for what unlocks when):
