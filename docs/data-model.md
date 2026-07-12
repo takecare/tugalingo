@@ -17,14 +17,15 @@ An array of word entries. Each entry:
 | `emojiVariants` | array of string *(optional)* | `["🍏"]` | Other emoji that are equally valid for this word — e.g. a cat has `🐱` as `emoji` and `🐈` as a variant. `pickEmoji(word)` (`src/lib/emoji.js`) picks uniformly at random from `[emoji, ...emojiVariants]` each time the word is asked, so the player learns the word maps to the *concept*, not to one specific glyph. Omitted entirely for words with only one sensible emoji. |
 | `category` | string | `"food"` | Descriptive only — not currently used to gate which lesson a word appears in (see [design.md](design.md#word-difficulty-ramp)). Kept for a possible future category-specific lesson track. Current categories: `food`, `animals`, `drinks`, `everyday`. |
 | `level` | number | `1` | Determines which lessons a word can appear in — see below. Currently `1` or `2`. |
+| `femaleForm` | `{ article, pt }` *(optional)* | `{ "article": "a", "pt": "cadela" }` | Present only on animal words that have a genuinely different feminine form, not just a different article — used by the `gender-match` question type (see [design.md](design.md#animal-sex-via-gender-match)). The top-level `article`/`pt`/`gender` fields are always that word's masculine form. |
 
 Example entry:
 
 ```json
-{ "id": "gato", "pt": "gato", "en": "cat", "article": "o", "gender": "m", "emoji": "🐱", "emojiVariants": ["🐈"], "category": "animals", "level": 1 }
+{ "id": "gato", "pt": "gato", "en": "cat", "article": "o", "gender": "m", "emoji": "🐱", "emojiVariants": ["🐈"], "category": "animals", "level": 1, "femaleForm": { "article": "a", "pt": "gata" } }
 ```
 
-**Adding a word** is just appending an object with these fields (`emojiVariants` optional) — no schema/migration to run since it's a static file. Picking a *second* emoji for `emojiVariants` is a judgment call: it needs to be unambiguously the same word (🐱/🐈 are both just "cat"; a polar bear emoji would *not* be a valid variant for `urso`, since that's arguably a different word) — see [design.md](design.md#question-types) for more on this.
+**Adding a word** is just appending an object with these fields (`emojiVariants` and `femaleForm` optional) — no schema/migration to run since it's a static file. Picking a *second* emoji for `emojiVariants` is a judgment call: it needs to be unambiguously the same word (🐱/🐈 are both just "cat"; a polar bear emoji would *not* be a valid variant for `urso`, since that's arguably a different word) — see [design.md](design.md#question-types) for more on this. `femaleForm` is an equally conservative judgment call — see [design.md](design.md#animal-sex-via-gender-match) for which pairs qualify and which are deliberately left out.
 
 ### How `level` maps to lessons
 
@@ -97,12 +98,12 @@ An array of concepts that only exist as a *combination* of emoji, used by the `c
 
 | Field | Type | Example (`emoji-match`) | Notes |
 |---|---|---|---|
-| `id` | string | `"maca"` | Unique per question instance — used as the React key for the current round (`sentence-fill`'s is `"<verbId>-<person>"` since the same verb can produce multiple distinct questions). |
+| `id` | string | `"maca"` | Unique per question instance — used as the React key for the current round (`sentence-fill`'s is `"<verbId>-<person>"` since the same verb can produce multiple distinct questions; `gender-match`'s is `"<wordId>-<sex>"` since the same word can produce a male or female question). |
 | `type` | string | `"emoji-match"` | Which registry entry generated/renders this question. |
 | `wordId` | string | `"maca"` | The underlying `words.json`/`verbs.json`/`compounds.json` entry this question is about — used to avoid repeating the same word, verb, or compound twice in a row. |
 | `title` | string | `"Match the word"` | Short description of the exercise; not currently rendered by any renderer but available for a type whose prompt needs framing. |
-| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`; `compound-match`'s is `{ emojis: [...] }` (plural — the whole sequence). |
-| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` choices are `{ id, label }` (the conjugated form text); `compound-match` choices are the same `{ id, article, pt, gender }` shape as `emoji-match`. Empty for `type-in`. |
+| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`; `compound-match`'s is `{ emojis: [...] }` (plural — the whole sequence); `gender-match`'s is `{ emoji, sex }` (`sex` is `"m"`/`"f"`, which symbol to render). |
+| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` choices are `{ id, label }` (the conjugated form text); `compound-match` and `gender-match` choices are the same `{ id, article, pt, gender }` shape as `emoji-match` (`gender-match`'s choice ids are `"<wordId>-m"`/`"<wordId>-f"`, and always include the word's other-sex form as one of the four). Empty for `type-in`. |
 | `correctChoiceIds` | array of string | `["maca"]` | Which `choices[].id`(s) are correct — an array rather than a single id so a future type can have more than one right answer. Empty for `type-in`. |
 | `correctText` | string | *(only on `type-in`)* | What the player's normalized input is compared against — see `typeIn.js`'s `normalize()` for the accent/case-insensitive comparison. |
 

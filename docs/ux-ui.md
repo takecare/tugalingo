@@ -54,6 +54,10 @@ Below that, the prompt and answer UI vary by question type (see [design.md](desi
 
   ![Type in](images/screen-type-in.png)
 
+- **`gender-match`** — the emoji plus a large colored ♂ (blue) or ♀ (pink) symbol as the prompt, then four word options in the same 2×2 grid as `emoji-match` — but this time the four options are the word's masculine and feminine forms mixed with other animals', so picking correctly means matching the word form to the symbol shown, not just recognizing the animal.
+
+  ![Gender match](images/screen-gender-match.png)
+
 - **`sentence-fill`** — an emoji sets the scene, with a one-line sentence below it (a pronoun, a blank, a period — e.g. *"Ele/Ela ____."*), and four conjugated-verb-form buttons.
 
   ![Sentence fill](images/screen-sentence-fill.png)
@@ -63,7 +67,7 @@ Below that, the prompt and answer UI vary by question type (see [design.md](desi
 ![Correct feedback](images/screen-correct-feedback.png)
 ![Incorrect feedback](images/screen-incorrect-feedback.png)
 
-The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `compound-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
+The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `compound-match`, `gender-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
 
 ## Screen: lesson results
 

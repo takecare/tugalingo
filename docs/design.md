@@ -15,17 +15,18 @@ A long lesson curriculum (translate a sentence, pick from a word bank, listen an
 
 "Match single emoji to gendered word" is one *question type*, not the only shape this game can take. Question types are a registry: each is a self-contained pair of a data generator (`src/lib/questionTypes/`) and a renderer (`src/components/questions/`), looked up by a `type` string. `Lesson.jsx` runs the round loop (progress bar, extend rule, in-lesson streak) without knowing or caring what kind of question it's showing, so adding a type is additive — a new file plus one registry line — rather than a rewrite of the lesson loop. See [architecture.md](architecture.md#question-types) for the file layout and [data-model.md](data-model.md#question-schema) for the exact `Question`/`Answer` shape.
 
-Five types exist:
+Six types exist:
 
 - **`emoji-match`** — the original mechanic (see [above](#core-round-loop)). Recognition: see a concept, pick the word.
 - **`reverse-match`** — the mirror: the word is the prompt, four emoji are the choices. This is recall rather than recognition (harder — you can't lean on eliminating obviously-wrong emoji the way you can eliminate obviously-wrong words), so it's unlocked a little after `emoji-match`.
 - **`compound-match`** — multiple emoji together as one prompt, for concepts a single emoji can't represent (see [below](#compound-concepts-via-compound-match)).
 - **`type-in`** — an emoji prompt again, but the player types the Portuguese word instead of picking it. Production instead of recognition, which is a bigger jump in difficulty than `reverse-match` — get it right without four options to narrow it down. Checked accent- and case-insensitively (`typeIn.js`'s `normalize()`), so a learner without easy access to ã/ç/õ on their keyboard isn't marked wrong for the accent alone, only for the word itself.
+- **`gender-match`** — an emoji plus a ♂/♀ symbol as the prompt, for animal words with a genuinely different form per sex (see [below](#animal-sex-via-gender-match)).
 - **`sentence-fill`** — verb conjugation (see below).
 
 ### Question types unlock gradually
 
-None of the newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `compound-match` after 4, `type-in` after 5, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `compound-match` introduces new but small content that's more fun once the basic prompt-then-choose pattern is familiar; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
+None of the newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `compound-match` after 4, `type-in` after 5, `gender-match` after 6, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `compound-match` introduces new but small content that's more fun once the basic prompt-then-choose pattern is familiar; `gender-match` needs the base word from `emoji-match` to already be comfortable, since it's now testing a second, related word on top of it; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
 
 ## Emoji variants
 
@@ -38,6 +39,12 @@ This is deliberately conservative: a variant has to be unambiguously the *same* 
 Some vocabulary only exists as a *combination*, not as a single word attached to a single emoji: ☕ alone is *café*, but ☕ next to 🥛 isn't "coffee and milk" as separate ideas, it's a specific drink with its own name and its own emoji arrangement. European Portuguese distinguishes these by how much milk there is — *galão* (a lot of milk, served tall, like a latte) vs. *meia de leite* (half and half, like a flat white) — which is exactly the kind of real, useful vocabulary a single-emoji format can't reach.
 
 `compound-match` (`src/data/compounds.json`) shows a short row of 2-3 emoji as one prompt (e.g. `☕ 🥛 🥛`) and asks for the word/phrase, multiple choice, the same as `emoji-match`. The repetition and ordering of emoji is meaningful and has to be unique per entry — see [data-model.md](data-model.md#compound-bank--srcdatacompoundsjson) for why two compounds can never share an emoji sequence. The bank starts small (four entries: `galão`, `meia de leite`, `sumo de laranja`, `pão com manteiga`) and is meant to grow the same way `words.json` and `verbs.json` did — one hand-picked, unambiguous combination at a time.
+
+## Animal sex, via gender-match
+
+The [gender badge mechanic](#the-gender-badge-mechanic) teaches *grammatical* gender, which is a property of the word, not the animal — *o cão* is grammatically masculine even when talking about a female dog in general. But some animal words also have a completely different, genuinely sex-specific form: a female dog isn't *uma cão*, she's *a cadela*; a female cat isn't *uma gato*, she's *a gata*. That's a different fact to learn, and it's easy to never encounter it if every question only ever shows the default/generic form.
+
+`gender-match` prompts with the emoji plus a large ♂ or ♀ symbol, and asks for the word form that matches — `[🐶 ♀]` → *a cadela*, not *o cão*. The word's *other* form is always deliberately included as one of the four options (`genderMatch.js`), so the round can't be solved by just recognizing the animal — the player has to know which of the two forms goes with which symbol. Content is a hand-picked, conservative list (`femaleForm` on the relevant entries in `src/data/words.json`): only animals where the everyday masculine word doubles as the species' generic term *and* has a real, commonly-used feminine counterpart (*cão/cadela, gato/gata, cavalo/égua, porco/porca, macaco/macaca, coelho/coelha, urso/ursa, leão/leoa*). Pairs where the "generic" word is already taught elsewhere as specifically one sex (e.g. *vaca* is already taught as the generic word for "cow", not specifically "female cow") are deliberately left out, so this doesn't contradict vocabulary the player already has.
 
 ## Verb conjugation, via sentence-fill
 

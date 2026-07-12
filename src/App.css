@@ -264,6 +264,33 @@
   line-height: 1;
 }
 
+.gender-match-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.gender-match-display__emoji {
+  font-size: 80px;
+  line-height: 1;
+}
+
+.gender-match-display__symbol {
+  font-size: 64px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.gender-match-display__symbol--m {
+  color: #3b82f6;
+}
+
+.gender-match-display__symbol--f {
+  color: #ec4899;
+}
+
 .options {
   width: 100%;
   display: grid;

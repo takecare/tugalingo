@@ -19,15 +19,17 @@ export function pickQuestionType(types) {
 
 // Question types unlock gradually rather than all mixing in from lesson one:
 // reverse-match and type-in are harder variants of the same recognition
-// skill, compound-match introduces new (small) content, and sentence-fill
-// (verb conjugation) is a different skill altogether that's easiest to take
-// on once basic vocab is comfortable. Keyed off completed-lesson count, same
-// signal as the word-level ramp below.
+// skill, compound-match introduces new (small) content, gender-match builds
+// on emoji-match once the base word is comfortable (see docs/design.md), and
+// sentence-fill (verb conjugation) is a different skill altogether that's
+// easiest to take on once basic vocab is comfortable. Keyed off
+// completed-lesson count, same signal as the word-level ramp below.
 const QUESTION_TYPE_UNLOCKS = [
   { type: 'emoji-match', after: 0 },
   { type: 'reverse-match', after: 2 },
   { type: 'compound-match', after: 4 },
   { type: 'type-in', after: 5 },
+  { type: 'gender-match', after: 6 },
   { type: 'sentence-fill', after: 8 },
 ]
 

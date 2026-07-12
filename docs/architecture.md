@@ -18,7 +18,7 @@
 - **`src/lib/lessons.js`** decides what content the *next* lesson draws from: `currentWordPool`/`currentVerbPool`/`currentCompoundPool` (the difficulty ramp), `buildLessonContext` (bundles all three into one object), `activeQuestionTypes` (which question types are unlocked so far), and the extend-past-10 rule — pure functions, no React.
 - **`src/lib/emoji.js`** — `pickEmoji(word)` picks one emoji from a word's `emoji` plus any `emojiVariants` each time it's asked, so a word with more than one valid emoji (e.g. a cat) doesn't always show the same glyph.
 - **`src/lib/questionTypes/`** is the question-type registry — see [Question types](#question-types) below.
-- **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`).
+- **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`, `gender-match`).
 - **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `recentDays`, and `currentStreak`.
 - **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
 - **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
@@ -26,13 +26,13 @@
 - **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, and the export/import buttons.
 - **`src/components/Lesson.jsx`** — plays one lesson: the round loop, the question-10 extend check, the progress bar. It knows nothing about *what kind* of question it's showing — it asks the registry for one and renders whatever comes back (see below).
 - **`src/components/questions/`** — one renderer component per question type, plus the registry (`QuestionRenderer`) that picks the right one, and `optionClassName.js`, a small shared helper so every choice-based renderer gets the same correct/incorrect/disabled styling without depending on each other.
-- **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion` and `CompoundMatchQuestion` (both have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`) render their own buttons since their content (an emoji, a bare word) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
+- **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion`, `CompoundMatchQuestion`, and `GenderMatchQuestion` (all have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`) render their own buttons since their content (an emoji, a bare word) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
 - **`src/components/LessonResults.jsx`** — the post-lesson score screen, including the updated streak.
 - **`src/components/VersionBadge.jsx`** — the small commit-SHA link in the bottom corner, present on every screen. Reads a `__COMMIT_SHA__` global that `vite.config.js` injects at build time via `define`: it's `VITE_COMMIT_SHA` (set by `.github/workflows/deploy.yml` to `github.sha`) in CI, or the local working tree's `git rev-parse HEAD` otherwise, so it's meaningful in `npm run dev`/`build` too, not just the deployed site.
 
 ## Question types
 
-Every question in a lesson is a plain data object plus a matching renderer, looked up by `type` — this is what makes adding a new kind of exercise additive rather than a rewrite of `Lesson.jsx`. Five are implemented:
+Every question in a lesson is a plain data object plus a matching renderer, looked up by `type` — this is what makes adding a new kind of exercise additive rather than a rewrite of `Lesson.jsx`. Six are implemented:
 
 | Type | Prompt | Answer | Content pool |
 |---|---|---|---|
@@ -40,6 +40,7 @@ Every question in a lesson is a plain data object plus a matching renderer, look
 | `reverse-match` | word | pick the emoji (4 choices) | `words` |
 | `compound-match` | 2-3 emoji together | pick the word/phrase (4 choices) | `compounds` |
 | `type-in` | emoji | type the word (free text) | `words` |
+| `gender-match` | emoji + ♂/♀ symbol | pick the sex-matching word form (4 choices) | `words` (entries with `femaleForm`) |
 | `sentence-fill` | emoji + pronoun | pick the conjugated verb form (4 choices) | `verbs` |
 
 - **`src/lib/questionTypes/<type>.js`** — the logic half. Exports `type` (a string id), `generate(context, avoidWordId) -> Question`, and `isCorrect(question, answer) -> boolean`. `context` is the `{ words, verbs, compounds }` object from `buildLessonContext` — each module reads whichever field(s) it needs.
@@ -86,8 +87,9 @@ src/
       reverseMatch.js        # word -> pick the emoji
       compoundMatch.js        # multiple emoji together -> pick the word/phrase
       typeIn.js                 # emoji -> type the word
-      sentenceFill.js            # verb conjugation fill-in-the-blank
-      index.js                    # question-type registry: generateQuestion(), checkAnswer()
+      genderMatch.js              # emoji + gender symbol -> pick the sex-matching word form
+      sentenceFill.js               # verb conjugation fill-in-the-blank
+      index.js                       # question-type registry: generateQuestion(), checkAnswer()
     round.js               # pickRound() / shuffle()
     dates.js                # dateKey(), recentDays(), currentStreak()
     progressFile.js          # downloadProgress(), parseProgressFile()
@@ -100,9 +102,10 @@ src/
       ReverseMatchQuestion.jsx  # renders reverse-match
       CompoundMatchQuestion.jsx  # renders compound-match
       TypeInQuestion.jsx           # renders type-in
-      SentenceFillQuestion.jsx      # renders sentence-fill
-      optionClassName.js             # shared correct/incorrect/disabled class logic
-      index.jsx                       # component registry: <QuestionRenderer />
+      GenderMatchQuestion.jsx        # renders gender-match
+      SentenceFillQuestion.jsx        # renders sentence-fill
+      optionClassName.js               # shared correct/incorrect/disabled class logic
+      index.jsx                         # component registry: <QuestionRenderer />
     OptionButton.jsx          # word-choice button (article + pt + gender)
     LessonResults.jsx          # post-lesson score + streak screen
     VersionBadge.jsx            # commit-SHA link, bottom corner, every screen
