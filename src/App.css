@@ -81,6 +81,39 @@
   cursor: pointer;
 }
 
+/* Progress export/import */
+
+.progress-io {
+  display: flex;
+  gap: 12px;
+}
+
+.progress-io__button {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.progress-io__button:hover {
+  border-color: var(--accent);
+  color: var(--text-h);
+}
+
+.progress-io__input {
+  display: none;
+}
+
+.progress-io__message {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
 /* Activity heatmap */
 
 .heatmap__grid {

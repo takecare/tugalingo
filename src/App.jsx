@@ -8,7 +8,7 @@ import LessonResults from './components/LessonResults'
 import './App.css'
 
 function App() {
-  const { progress, recordLessonCompletion } = useProgress()
+  const { progress, recordLessonCompletion, replaceProgress } = useProgress()
   const [view, setView] = useState({ screen: 'home' })
 
   function startLesson() {
@@ -69,7 +69,7 @@ function App() {
         <h1>tugalingo</h1>
         <p>learn Portuguese, one lesson at a time</p>
       </header>
-      <Home progress={progress} onStartLesson={startLesson} />
+      <Home progress={progress} onStartLesson={startLesson} onImportProgress={replaceProgress} />
     </div>
   )
 }

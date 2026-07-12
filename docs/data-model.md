@@ -137,6 +137,23 @@ Written by `src/hooks/useProgress.js`, read back on every page load.
 
 A lesson only writes to this object once it's *completed* — exiting mid-lesson (the ✕ button) records nothing, so an abandoned attempt never counts toward `history`, a day's activity count, or the streak.
 
-This is **per-browser, not per-player** — there's no login, so switching browsers/devices starts fresh (see [architecture.md](architecture.md#why-no-backend) for the tradeoff).
+This is **per-browser, not per-player** — there's no login, so switching browsers/devices starts fresh (see [architecture.md](architecture.md#why-no-backend) for the tradeoff) unless it's moved manually — see below.
 
 Session-only state (current round, in-lesson streak, current question index/total) lives in `Lesson.jsx`'s React state and is *not* persisted — it's discarded the moment a lesson ends or is exited, since only completed lessons are meaningful history.
+
+## Progress file import / export
+
+The export file is exactly the object above, pretty-printed, with no extra wrapper or metadata:
+
+```json
+{
+  "history": [{ "completedAt": "2026-07-11T17:41:14.223Z", "correct": 14, "total": 14 }],
+  "activityByDate": { "2026-07-11": { "lessonsCompleted": 1 } }
+}
+```
+
+On import, `parseProgressFile` (`src/lib/progressFile.js`) requires:
+- `history` is an array, and every entry has `completedAt` (string), `correct` (number), `total` (number).
+- `activityByDate` is an object, and every value has `lessonsCompleted` (number).
+
+Anything else — invalid JSON, a missing field, a field of the wrong type, a completely unrelated JSON file — is rejected with a specific error message rather than partially applied; there's no attempt to coerce or fill in missing pieces, since a half-valid import silently corrupting real progress would be worse than refusing it outright. A valid import replaces `progress` wholesale (`replaceProgress` in `useProgress.js`) rather than merging with what's already there — merging two independent `history` arrays (e.g. deduplicating same-day entries, reconciling which "day 3" is really day 3) adds real complexity for a niche use case, so it's out of scope for now; see [ux-ui.md](ux-ui.md#export--import-progress) for the confirmation step this implies.

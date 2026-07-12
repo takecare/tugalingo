@@ -14,10 +14,21 @@ This is the first thing the player sees, and everything on it is progress-driven
 - **Activity heatmap** — the last 12 weeks, one cell per day, shaded by how many lessons were completed that day. Today's cell has a purple outline so it's easy to find. Unlike the streak number, this never resets — it's the honest longer-term record even across a broken streak.
 - **Lifetime stat** — total lessons completed, ever.
 - **New Lesson button** — the only way to start playing. There's no lesson list, no numbering, no map to navigate.
+- **Export/Import progress** — two small secondary buttons below New Lesson, deliberately understated (plain outlined buttons, not accent-colored) so they don't compete with the primary action. See [below](#export--import-progress).
 
 ![Home screen with a streak going](images/screen-home-with-streak.png)
 
 Once a lesson is completed: the streak block updates and turns green, the heatmap gets a colored cell for today, and the lifetime count increments.
+
+## Export / import progress
+
+![Home screen with export/import buttons](images/screen-home-export-import.png)
+
+- **Export progress** downloads the current `localStorage` progress object as a JSON file (`tugalingo-progress-<today's date>.json`) — no dialog, just an immediate browser download.
+- **Import progress** opens a native file picker. If the chosen file parses as a valid progress export, a browser `confirm()` warns that it will replace everything currently on this device before applying it — this is the one destructive action in the app, so it's the one place that interrupts with a confirmation. If the file doesn't parse, or doesn't look like a progress export, an inline message explains why and nothing is changed.
+- Both read from and write to the same `progress` state as everything else (via `replaceProgress` in `useProgress.js`) — home, the streak, and the heatmap all reflect an import immediately, the same as finishing a lesson would.
+
+See [architecture.md](architecture.md#why-no-backend) and [data-model.md](data-model.md#progress-file-import--export) for why this exists: it's the workaround for there being no accounts or cross-device sync.
 
 ## Screen: playing a lesson
 

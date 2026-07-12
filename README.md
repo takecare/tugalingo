@@ -6,7 +6,7 @@ A small European Portuguese vocabulary game: match an emoji to the Portuguese wo
 
 ![Home screen](docs/images/screen-home-with-streak.png)
 
-Press "New Lesson" to play — each lesson is a minimum of 10 questions, extending to 12-14 if you score well on the first 10. A day streak and an activity heatmap track daily play; progress is saved in the browser. See [docs/design.md](docs/design.md#streak--daily-activity) for the reasoning behind the streak, and [docs/design.md](docs/design.md#lesson-length-and-the-extend-rule) for the exact extend rule.
+Press "New Lesson" to play — each lesson is a minimum of 10 questions, extending to 12-14 if you score well on the first 10. A day streak and an activity heatmap track daily play; progress is saved in the browser, and can be exported/imported as a JSON file (handy for moving to a new device, since there are no accounts). See [docs/design.md](docs/design.md#streak--daily-activity) for the reasoning behind the streak, and [docs/design.md](docs/design.md#lesson-length-and-the-extend-rule) for the exact extend rule.
 
 ## Running it locally
 

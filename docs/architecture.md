@@ -20,9 +20,10 @@
 - **`src/lib/questionTypes/`** is the question-type registry — see [Question types](#question-types) below.
 - **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`).
 - **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `lastNDays`, and `currentStreak`.
-- **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes one write path — `recordLessonCompletion(correct, total)` — called exactly once, when a lesson finishes. Exiting a lesson early never calls it.
+- **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
+- **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
 - **`src/App.jsx`** is a tiny screen router with three states: `home`, `lesson`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
-- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, and the "New Lesson" button.
+- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, and the export/import buttons.
 - **`src/components/Lesson.jsx`** — plays one lesson: the round loop, the question-10 extend check, the progress bar. It knows nothing about *what kind* of question it's showing — it asks the registry for one and renders whatever comes back (see below).
 - **`src/components/questions/`** — one renderer component per question type, plus the registry (`QuestionRenderer`) that picks the right one, and `optionClassName.js`, a small shared helper so every choice-based renderer gets the same correct/incorrect/disabled styling without depending on each other.
 - **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion` and `CompoundMatchQuestion` (both have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`) render their own buttons since their content (an emoji, a bare word) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
@@ -53,9 +54,18 @@ Every question in a lesson is a plain data object plus a matching renderer, look
 
 A lesson is 10 questions minimum. At question 10, the running correct-count decides whether it extends — see [design.md](design.md#lesson-length-and-the-extend-rule) for the exact rule and the reasoning behind it.
 
+## Progress export/import
+
+`src/lib/progressFile.js` is plain, framework-free logic:
+
+- `downloadProgress(progress)` — serializes the `progress` object to a JSON `Blob` and triggers a browser download via a throwaway `<a download>` element. No confirmation, since exporting is non-destructive.
+- `parseProgressFile(file)` — reads a `File` (from a file `<input>`), `JSON.parse`s it, and validates the result actually has the progress shape (an array `history` of `{ completedAt, correct, total }` and an object `activityByDate` of `{ lessonsCompleted }`) before returning it. Throws a descriptive `Error` on anything that doesn't match, which `Home.jsx` catches and displays inline — nothing is ever applied to `progress` from an unvalidated file.
+
+`Home.jsx` wires these to a hidden file `<input>` and a native `window.confirm()` (the only confirmation dialog in the app, since import is the only destructive action — it fully replaces `progress` via `replaceProgress`). See [data-model.md](data-model.md#progress-file-import--export) for the exact validation rules and [ux-ui.md](ux-ui.md#export--import-progress) for the UI.
+
 ## Why no backend
 
-The two questions that usually justify a backend — "does progress need to sync across devices?" and "does someone need to log in?" — were both answered no. `useProgress.js` is the single seam to swap if that changes later: it already isolates all read/write of progress behind `progress` and `recordLessonCompletion`, so replacing `localStorage` with an API call wouldn't touch `Lesson.jsx`, `Home.jsx`, or `LessonResults.jsx`.
+The two questions that usually justify a backend — "does progress need to sync across devices?" and "does someone need to log in?" — were both answered no. `useProgress.js` is the single seam to swap if that changes later: it already isolates all read/write of progress behind `progress`, `recordLessonCompletion`, and `replaceProgress`, so replacing `localStorage` with an API call wouldn't touch `Lesson.jsx`, `Home.jsx`, or `LessonResults.jsx`. Export/import (above) is the manual, no-backend stand-in for cross-device sync in the meantime.
 
 ## Folder structure
 
@@ -79,8 +89,9 @@ src/
       index.js                    # question-type registry: generateQuestion(), checkAnswer()
     round.js               # pickRound() / shuffle()
     dates.js                # dateKey(), lastNDays(), currentStreak()
+    progressFile.js          # downloadProgress(), parseProgressFile()
   components/
-    Home.jsx                # home screen: streak + heatmap + New Lesson
+    Home.jsx                # home screen: streak + heatmap + New Lesson + export/import
     ActivityHeatmap.jsx      # calendar heatmap
     Lesson.jsx                # plays one lesson, question-type-agnostic
     questions/

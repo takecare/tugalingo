@@ -45,5 +45,9 @@ export function useProgress() {
     })
   }
 
-  return { progress, recordLessonCompletion }
+  function replaceProgress(newProgress) {
+    setProgress(newProgress)
+  }
+
+  return { progress, recordLessonCompletion, replaceProgress }
 }
