@@ -54,6 +54,13 @@ body {
   margin: 0;
 }
 
+button {
+  /* Prevent mobile browsers' native tap-highlight overlay from lingering on
+     a button after it's tapped — it isn't cleared by React re-renders, so it
+     can visually bleed into the next question when a button is reused. */
+  -webkit-tap-highlight-color: transparent;
+}
+
 #root {
   width: 1126px;
   max-width: 100%;
