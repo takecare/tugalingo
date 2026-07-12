@@ -5,6 +5,7 @@ import { buildLessonContext, activeQuestionTypes } from './lib/lessons'
 import Lesson from './components/Lesson'
 import Home from './components/Home'
 import LessonResults from './components/LessonResults'
+import VersionBadge from './components/VersionBadge'
 import './App.css'
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
           onExit={() => setView({ screen: 'home' })}
           onComplete={completeLesson}
         />
+        <VersionBadge />
       </div>
     )
   }
@@ -59,6 +61,7 @@ function App() {
           streak={view.streak}
           onContinue={() => setView({ screen: 'home' })}
         />
+        <VersionBadge />
       </div>
     )
   }
@@ -70,6 +73,7 @@ function App() {
         <p>learn Portuguese, one lesson at a time</p>
       </header>
       <Home progress={progress} onStartLesson={startLesson} onImportProgress={replaceProgress} />
+      <VersionBadge />
     </div>
   )
 }

@@ -114,6 +114,23 @@
   color: var(--text);
 }
 
+/* Version badge */
+
+.version-badge {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.4;
+  text-decoration: none;
+}
+
+.version-badge:hover {
+  opacity: 1;
+}
+
 /* Activity heatmap */
 
 .heatmap__grid {

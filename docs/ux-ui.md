@@ -76,6 +76,10 @@ Shown once the lesson ends (at 10, 12, or 14 questions). Always shows the raw sc
 
 A single "Continue" button returns home, where the streak, heatmap, and lifetime count have already updated.
 
+## Version badge
+
+A small, low-opacity commit SHA sits fixed in the bottom-right corner on every screen, linking to that commit on GitHub. It's the deployed commit in production (set from `github.sha` by `.github/workflows/deploy.yml`), or the local working tree's commit when running `npm run dev`/`build` — see [architecture.md](architecture.md#component--data-flow) for how it's injected. Deliberately unobtrusive (11px, 40% opacity) since it's a debugging aid, not something a player needs to see.
+
 ## Interaction notes
 
 - The 900ms delay between answering and the next round is a fixed constant in `Lesson.jsx` — long enough to read the correction, short enough that even a 14-question lesson doesn't feel padded.

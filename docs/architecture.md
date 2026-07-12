@@ -28,6 +28,7 @@
 - **`src/components/questions/`** — one renderer component per question type, plus the registry (`QuestionRenderer`) that picks the right one, and `optionClassName.js`, a small shared helper so every choice-based renderer gets the same correct/incorrect/disabled styling without depending on each other.
 - **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion` and `CompoundMatchQuestion` (both have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`) render their own buttons since their content (an emoji, a bare word) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
 - **`src/components/LessonResults.jsx`** — the post-lesson score screen, including the updated streak.
+- **`src/components/VersionBadge.jsx`** — the small commit-SHA link in the bottom corner, present on every screen. Reads a `__COMMIT_SHA__` global that `vite.config.js` injects at build time via `define`: it's `VITE_COMMIT_SHA` (set by `.github/workflows/deploy.yml` to `github.sha`) in CI, or the local working tree's `git rev-parse HEAD` otherwise, so it's meaningful in `npm run dev`/`build` too, not just the deployed site.
 
 ## Question types
 
@@ -104,6 +105,7 @@ src/
       index.jsx                       # component registry: <QuestionRenderer />
     OptionButton.jsx          # word-choice button (article + pt + gender)
     LessonResults.jsx          # post-lesson score + streak screen
+    VersionBadge.jsx            # commit-SHA link, bottom corner, every screen
   App.jsx                      # screen router (home / lesson / results)
   App.css                       # all styling
   index.css                      # theme variables, base styles
