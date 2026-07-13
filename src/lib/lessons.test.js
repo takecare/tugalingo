@@ -3,6 +3,7 @@ import {
   activeQuestionTypes,
   buildLessonContext,
   currentCompoundPool,
+  currentPhrasePool,
   currentVerbPool,
   currentWordPool,
   pickQuestionType,
@@ -32,7 +33,7 @@ describe('activeQuestionTypes', () => {
     const seenAt8 = activeQuestionTypes(progressWithHistory(8))
 
     expect(seenAt2).toEqual(['emoji-match', 'reverse-match'])
-    expect(seenAt4).toEqual(['emoji-match', 'reverse-match', 'compound-match'])
+    expect(seenAt4).toEqual(['emoji-match', 'reverse-match', 'phrase-match', 'compound-match'])
     expect(seenAt8).toContain('gender-match')
     expect(seenAt8).toContain('sentence-fill')
 
@@ -41,8 +42,8 @@ describe('activeQuestionTypes', () => {
     for (const type of seenAt4) expect(seenAt8).toContain(type)
   })
 
-  it('all six types are unlocked by lesson 8', () => {
-    expect(activeQuestionTypes(progressWithHistory(8))).toHaveLength(6)
+  it('all seven types are unlocked by lesson 8', () => {
+    expect(activeQuestionTypes(progressWithHistory(8))).toHaveLength(7)
   })
 })
 
@@ -56,7 +57,7 @@ describe('word/verb/compound pools ramp with level', () => {
     expect(later.length).toBeGreaterThan(early.length)
   })
 
-  it('applies the same ramp to verbs and compounds', () => {
+  it('applies the same ramp to verbs, compounds, and phrases', () => {
     const earlyVerbs = currentVerbPool(progressWithHistory(0))
     const laterVerbs = currentVerbPool(progressWithHistory(3))
     expect(laterVerbs.length).toBeGreaterThanOrEqual(earlyVerbs.length)
@@ -64,15 +65,20 @@ describe('word/verb/compound pools ramp with level', () => {
     const earlyCompounds = currentCompoundPool(progressWithHistory(0))
     const laterCompounds = currentCompoundPool(progressWithHistory(3))
     expect(laterCompounds.length).toBeGreaterThanOrEqual(earlyCompounds.length)
+
+    const earlyPhrases = currentPhrasePool(progressWithHistory(0))
+    const laterPhrases = currentPhrasePool(progressWithHistory(3))
+    expect(laterPhrases.length).toBeGreaterThanOrEqual(earlyPhrases.length)
   })
 })
 
 describe('buildLessonContext', () => {
-  it('bundles words, verbs, and compounds together', () => {
+  it('bundles words, verbs, compounds, and phrases together', () => {
     const context = buildLessonContext(progressWithHistory(5))
     expect(context).toHaveProperty('words')
     expect(context).toHaveProperty('verbs')
     expect(context).toHaveProperty('compounds')
+    expect(context).toHaveProperty('phrases')
     expect(context.words.length).toBeGreaterThan(0)
   })
 })

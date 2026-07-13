@@ -1,0 +1,8 @@
+[
+  { "id": "como-estas",    "emoji": "🙂", "prompt": "Como estás?",              "reply": "Bem, obrigado.",     "level": 1 },
+  { "id": "obrigado",      "emoji": "🙏", "prompt": "Obrigado!",                "reply": "De nada!",           "level": 1 },
+  { "id": "como-te-chamas","emoji": "🙋", "prompt": "Como te chamas?",          "reply": "Chamo-me Ana.",      "level": 1 },
+  { "id": "quantos-anos",  "emoji": "🎂", "prompt": "Quantos anos tens?",       "reply": "Tenho vinte anos.",  "level": 2 },
+  { "id": "casa-banho",    "emoji": "🚻", "prompt": "Onde é a casa de banho?",  "reply": "É ali, à direita.",  "level": 2 },
+  { "id": "quanto-custa",  "emoji": "💰", "prompt": "Quanto custa?",            "reply": "Custa dez euros.",   "level": 2 }
+]

@@ -4,6 +4,7 @@ import TypeInQuestion from './TypeInQuestion'
 import SentenceFillQuestion from './SentenceFillQuestion'
 import CompoundMatchQuestion from './CompoundMatchQuestion'
 import GenderMatchQuestion from './GenderMatchQuestion'
+import PhraseMatchQuestion from './PhraseMatchQuestion'
 
 // Registry of question renderers, keyed by question type. Add a new
 // component (see EmojiMatchQuestion.jsx for the props contract: question,
@@ -16,6 +17,7 @@ const registry = {
   'sentence-fill': SentenceFillQuestion,
   'compound-match': CompoundMatchQuestion,
   'gender-match': GenderMatchQuestion,
+  'phrase-match': PhraseMatchQuestion,
 }
 
 export default function QuestionRenderer({ question, feedback, onAnswer }) {

@@ -395,6 +395,27 @@
   font-weight: 600;
 }
 
+/* Phrase-match: a conversational cue, pick the natural reply */
+
+.phrase-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+}
+
+.phrase-display__emoji {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.phrase-display__prompt {
+  font-size: 24px;
+  color: var(--text-h);
+  margin: 0;
+}
+
 /* Type-in: free-text answer instead of choices */
 
 .type-in {

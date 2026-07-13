@@ -1,6 +1,7 @@
 import words from '../data/words.json'
 import verbs from '../data/verbs.json'
 import compounds from '../data/compounds.json'
+import phrases from '../data/phrases.json'
 
 export const BASE_QUESTIONS = 10
 export const EXTEND_THRESHOLD = 9
@@ -19,14 +20,15 @@ export function pickQuestionType(types) {
 
 // Question types unlock gradually rather than all mixing in from lesson one:
 // reverse-match and type-in are harder variants of the same recognition
-// skill, compound-match introduces new (small) content, gender-match builds
-// on emoji-match once the base word is comfortable (see docs/design.md), and
-// sentence-fill (verb conjugation) is a different skill altogether that's
-// easiest to take on once basic vocab is comfortable. Keyed off
-// completed-lesson count, same signal as the word-level ramp below.
+// skill, compound-match and phrase-match each introduce new (small) content,
+// gender-match builds on emoji-match once the base word is comfortable (see
+// docs/design.md), and sentence-fill (verb conjugation) is a different skill
+// altogether that's easiest to take on once basic vocab is comfortable.
+// Keyed off completed-lesson count, same signal as the word-level ramp below.
 const QUESTION_TYPE_UNLOCKS = [
   { type: 'emoji-match', after: 0 },
   { type: 'reverse-match', after: 2 },
+  { type: 'phrase-match', after: 3 },
   { type: 'compound-match', after: 4 },
   { type: 'type-in', after: 5 },
   { type: 'gender-match', after: 6 },
@@ -58,6 +60,11 @@ export function currentCompoundPool(progress) {
   return compounds.filter((c) => c.level <= cap)
 }
 
+export function currentPhrasePool(progress) {
+  const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
+  return phrases.filter((p) => p.level <= cap)
+}
+
 // Bundles every content pool a question type might draw from. Adding a
 // question type that needs a new kind of content (e.g. a sentence corpus)
 // means adding one more named field here — generate(context, avoidId)
@@ -67,5 +74,6 @@ export function buildLessonContext(progress) {
     words: currentWordPool(progress),
     verbs: currentVerbPool(progress),
     compounds: currentCompoundPool(progress),
+    phrases: currentPhrasePool(progress),
   }
 }

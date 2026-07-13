@@ -14,11 +14,11 @@
 
 ![Architecture diagram](images/architecture.png)
 
-- **`src/data/words.json`** is the noun/vocab bank; **`src/data/verbs.json`** is the verb-conjugation bank; **`src/data/compounds.json`** is the multi-emoji compound-concept bank — all pure data, no logic.
-- **`src/lib/lessons.js`** decides what content the *next* lesson draws from: `currentWordPool`/`currentVerbPool`/`currentCompoundPool` (the difficulty ramp), `buildLessonContext` (bundles all three into one object), `activeQuestionTypes` (which question types are unlocked so far), and the extend-past-10 rule — pure functions, no React.
+- **`src/data/words.json`** is the noun/vocab bank; **`src/data/verbs.json`** is the verb-conjugation bank; **`src/data/compounds.json`** is the multi-emoji compound-concept bank; **`src/data/phrases.json`** is the conversational phrase bank — all pure data, no logic.
+- **`src/lib/lessons.js`** decides what content the *next* lesson draws from: `currentWordPool`/`currentVerbPool`/`currentCompoundPool`/`currentPhrasePool` (the difficulty ramp), `buildLessonContext` (bundles all four into one object), `activeQuestionTypes` (which question types are unlocked so far), and the extend-past-10 rule — pure functions, no React.
 - **`src/lib/emoji.js`** — `pickEmoji(word)` picks one emoji from a word's `emoji` plus any `emojiVariants` each time it's asked, so a word with more than one valid emoji (e.g. a cat) doesn't always show the same glyph.
 - **`src/lib/questionTypes/`** is the question-type registry — see [Question types](#question-types) below.
-- **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`, `gender-match`).
+- **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`, `gender-match`, `phrase-match`).
 - **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `recentDays`, and `currentStreak`.
 - **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
 - **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
@@ -26,24 +26,25 @@
 - **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, and the export/import buttons.
 - **`src/components/Lesson.jsx`** — plays one lesson: the round loop, the question-10 extend check, the progress bar. It knows nothing about *what kind* of question it's showing — it asks the registry for one and renders whatever comes back (see below).
 - **`src/components/questions/`** — one renderer component per question type, plus the registry (`QuestionRenderer`) that picks the right one, and `optionClassName.js`, a small shared helper so every choice-based renderer gets the same correct/incorrect/disabled styling without depending on each other.
-- **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion`, `CompoundMatchQuestion`, and `GenderMatchQuestion` (all have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`) render their own buttons since their content (an emoji, a bare word) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
+- **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion`, `CompoundMatchQuestion`, and `GenderMatchQuestion` (all have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`, `PhraseMatchQuestion`) render their own buttons since their content (an emoji, a bare word, a reply phrase) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
 - **`src/components/LessonResults.jsx`** — the post-lesson score screen, including the updated streak.
 - **`src/components/VersionBadge.jsx`** — the small commit-SHA link in the bottom corner, present on every screen. Reads a `__COMMIT_SHA__` global that `vite.config.js` injects at build time via `define`: it's `VITE_COMMIT_SHA` (set by `.github/workflows/deploy.yml` to `github.sha`) in CI, or the local working tree's `git rev-parse HEAD` otherwise, so it's meaningful in `npm run dev`/`build` too, not just the deployed site.
 
 ## Question types
 
-Every question in a lesson is a plain data object plus a matching renderer, looked up by `type` — this is what makes adding a new kind of exercise additive rather than a rewrite of `Lesson.jsx`. Six are implemented:
+Every question in a lesson is a plain data object plus a matching renderer, looked up by `type` — this is what makes adding a new kind of exercise additive rather than a rewrite of `Lesson.jsx`. Seven are implemented:
 
 | Type | Prompt | Answer | Content pool |
 |---|---|---|---|
 | `emoji-match` | emoji | pick the word (4 choices) | `words` |
 | `reverse-match` | word | pick the emoji (4 choices) | `words` |
+| `phrase-match` | emoji + conversational phrase | pick the reply (4 choices) | `phrases` |
 | `compound-match` | 2-3 emoji together | pick the word/phrase (4 choices) | `compounds` |
 | `type-in` | emoji | type the word (free text) | `words` |
 | `gender-match` | emoji + ♂/♀ symbol | pick the sex-matching word form (4 choices) | `words` (entries with `femaleForm`) |
 | `sentence-fill` | emoji + pronoun | pick the conjugated verb form (4 choices) | `verbs` |
 
-- **`src/lib/questionTypes/<type>.js`** — the logic half. Exports `type` (a string id), `generate(context, avoidWordId) -> Question`, and `isCorrect(question, answer) -> boolean`. `context` is the `{ words, verbs, compounds }` object from `buildLessonContext` — each module reads whichever field(s) it needs.
+- **`src/lib/questionTypes/<type>.js`** — the logic half. Exports `type` (a string id), `generate(context, avoidWordId) -> Question`, and `isCorrect(question, answer) -> boolean`. `context` is the `{ words, verbs, compounds, phrases }` object from `buildLessonContext` — each module reads whichever field(s) it needs.
 - **`src/lib/questionTypes/index.js`** — the registry. `generateQuestion(type, context, avoidWordId)` and `checkAnswer(question, answer)` dispatch to the right module by `question.type`. This is the only file that needs a new line added when a question type is added.
 - **`src/components/questions/<Type>Question.jsx`** — the rendering half: takes `{ question, feedback, onAnswer }` and renders the prompt + answer UI, calling `onAnswer(answer)` when the player responds. `feedback` is `{ correct, answer }` once one has been submitted, or `null` before that.
 - **`src/components/questions/index.jsx`** — the component registry (`QuestionRenderer`), keyed the same way as the logic registry above. It renders with `key={question.id}` so any question-local UI state (e.g. `TypeInQuestion`'s text input) resets between questions, even two of the same type back to back.
@@ -69,7 +70,7 @@ A lesson is 10 questions minimum. At question 10, the running correct-count deci
 
 Everything under `src/lib/` (and its `questionTypes/` subfolder) is plain, framework-free logic — no DOM, no React — which makes it straightforward to unit test in isolation with [Vitest](https://vitest.dev), without needing a browser or React Testing Library. Each module has a co-located `*.test.js` file (e.g. `src/lib/dates.test.js` next to `dates.js`).
 
-What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json` banks as an end-to-end sanity check that the actual content is well-formed.
+What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
 
 Deliberately not covered: React components (`src/components/`) and `progressFile.js`'s `downloadProgress` (needs a real DOM for `Blob`/`URL.createObjectURL`) — these are thin rendering/wiring layers verified manually in a real browser instead, since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
 
@@ -87,6 +88,7 @@ src/
     words.json          # noun/vocab bank
     verbs.json           # verb-conjugation bank
     compounds.json        # multi-emoji compound-concept bank
+    phrases.json           # conversational prompt/reply bank
   hooks/
     useProgress.js       # persisted lesson history + daily activity
   lib/
@@ -95,11 +97,12 @@ src/
     questionTypes/
       emojiMatch.js         # emoji -> pick the word
       reverseMatch.js        # word -> pick the emoji
-      compoundMatch.js        # multiple emoji together -> pick the word/phrase
-      typeIn.js                 # emoji -> type the word
-      genderMatch.js              # emoji + gender symbol -> pick the sex-matching word form
-      sentenceFill.js               # verb conjugation fill-in-the-blank
-      index.js                       # question-type registry: generateQuestion(), checkAnswer()
+      phraseMatch.js           # conversational phrase -> pick the reply
+      compoundMatch.js           # multiple emoji together -> pick the word/phrase
+      typeIn.js                    # emoji -> type the word
+      genderMatch.js                 # emoji + gender symbol -> pick the sex-matching word form
+      sentenceFill.js                  # verb conjugation fill-in-the-blank
+      index.js                           # question-type registry: generateQuestion(), checkAnswer()
     round.js               # pickRound() / shuffle()
     dates.js                # dateKey(), recentDays(), currentStreak()
     progressFile.js          # downloadProgress(), parseProgressFile()
@@ -110,12 +113,13 @@ src/
     questions/
       EmojiMatchQuestion.jsx   # renders emoji-match
       ReverseMatchQuestion.jsx  # renders reverse-match
-      CompoundMatchQuestion.jsx  # renders compound-match
-      TypeInQuestion.jsx           # renders type-in
-      GenderMatchQuestion.jsx        # renders gender-match
-      SentenceFillQuestion.jsx        # renders sentence-fill
-      optionClassName.js               # shared correct/incorrect/disabled class logic
-      index.jsx                         # component registry: <QuestionRenderer />
+      PhraseMatchQuestion.jsx     # renders phrase-match
+      CompoundMatchQuestion.jsx    # renders compound-match
+      TypeInQuestion.jsx             # renders type-in
+      GenderMatchQuestion.jsx          # renders gender-match
+      SentenceFillQuestion.jsx           # renders sentence-fill
+      optionClassName.js                   # shared correct/incorrect/disabled class logic
+      index.jsx                             # component registry: <QuestionRenderer />
     OptionButton.jsx          # word-choice button (article + pt + gender)
     LessonResults.jsx          # post-lesson score + streak screen
     VersionBadge.jsx            # commit-SHA link, bottom corner, every screen

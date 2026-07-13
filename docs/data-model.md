@@ -92,6 +92,20 @@ An array of concepts that only exist as a *combination* of emoji, used by the `c
 
 **Every compound in the bank must have a distinct `emojis` sequence.** Since the emoji sequence is the *entire* prompt (no text hint), two compounds that render the same sequence would make the "correct" choice arbitrary — this is the reason `garoto` (espresso with a dash of milk) isn't in the bank yet: it's visually indistinguishable from `meia de leite` using only 1x ☕ + 1x 🥛.
 
+## Phrase bank — `src/data/phrases.json`
+
+An array of short conversational exchanges, used by the `phrase-match` question type — an emoji plus a Portuguese prompt phrase, and the player picks the matching reply (see [design.md](design.md#conversational-phrases-via-phrase-match) for why this needed its own content and question type).
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `id` | string | `"como-estas"` | Stable, unique, ASCII. |
+| `emoji` | string | `"🙂"` | Sets the scene for the prompt phrase. One fixed emoji per entry — no `emojiVariants`, since these are about a specific exchange rather than a single concept. |
+| `prompt` | string | `"Como estás?"` | The Portuguese question or exclamation shown as the prompt. |
+| `reply` | string | `"Bem, obrigado."` | The correct response — also doubles as a distractor for every *other* phrase's question. |
+| `level` | number | `1` | Same ramp mechanism as `words.json`. |
+
+**Every phrase's `reply` must be unambiguous** — it can't plausibly answer more than one prompt in the bank, or a "wrong" distractor would arguably be correct too. This is the same reasoning as compound-match's unique `emojis` sequences, just applied to reply text instead.
+
 ## Question schema
 
 `src/lib/questionTypes/` generates one of these per round, and `src/components/questions/` renders it — see [architecture.md](architecture.md#question-types) for how the registries plug together. Every question type produces a `Question` object with this shape (some fields only make sense for multiple-choice types; `type-in` leaves `choices`/`correctChoiceIds` empty and checks against `correctText` instead):
@@ -100,10 +114,10 @@ An array of concepts that only exist as a *combination* of emoji, used by the `c
 |---|---|---|---|
 | `id` | string | `"maca"` | Unique per question instance — used as the React key for the current round (`sentence-fill`'s is `"<verbId>-<person>"` since the same verb can produce multiple distinct questions; `gender-match`'s is `"<wordId>-<sex>"` since the same word can produce a male or female question). |
 | `type` | string | `"emoji-match"` | Which registry entry generated/renders this question. |
-| `wordId` | string | `"maca"` | The underlying `words.json`/`verbs.json`/`compounds.json` entry this question is about — used to avoid repeating the same word, verb, or compound twice in a row. |
+| `wordId` | string | `"maca"` | The underlying `words.json`/`verbs.json`/`compounds.json`/`phrases.json` entry this question is about — used to avoid repeating the same word, verb, compound, or phrase twice in a row. |
 | `title` | string | `"Match the word"` | Short description of the exercise; not currently rendered by any renderer but available for a type whose prompt needs framing. |
-| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`; `compound-match`'s is `{ emojis: [...] }` (plural — the whole sequence); `gender-match`'s is `{ emoji, sex }` (`sex` is `"m"`/`"f"`, which symbol to render). |
-| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` choices are `{ id, label }` (the conjugated form text); `compound-match` and `gender-match` choices are the same `{ id, article, pt, gender }` shape as `emoji-match` (`gender-match`'s choice ids are `"<wordId>-m"`/`"<wordId>-f"`, and always include the word's other-sex form as one of the four). Empty for `type-in`. |
+| `body` | object | `{ emoji: "🍎" }` | Type-specific prompt data — whatever the renderer needs to show the question. `reverse-match`'s is `{ article, pt, gender }`; `sentence-fill`'s is `{ emoji, pronoun }`; `compound-match`'s is `{ emojis: [...] }` (plural — the whole sequence); `gender-match`'s is `{ emoji, sex }` (`sex` is `"m"`/`"f"`, which symbol to render); `phrase-match`'s is `{ emoji, prompt }` (`prompt` is the Portuguese question/exclamation text). |
+| `choices` | array | `[{ id, article, pt, gender }, ...]` | The answer options, for multiple-choice types. `reverse-match` choices are `{ id, emoji }`; `sentence-fill` and `phrase-match` choices are `{ id, label }` (the conjugated form / reply text); `compound-match` and `gender-match` choices are the same `{ id, article, pt, gender }` shape as `emoji-match` (`gender-match`'s choice ids are `"<wordId>-m"`/`"<wordId>-f"`, and always include the word's other-sex form as one of the four). Empty for `type-in`. |
 | `correctChoiceIds` | array of string | `["maca"]` | Which `choices[].id`(s) are correct — an array rather than a single id so a future type can have more than one right answer. Empty for `type-in`. |
 | `correctText` | string | *(only on `type-in`)* | What the player's normalized input is compared against — see `typeIn.js`'s `normalize()` for the accent/case-insensitive comparison. |
 

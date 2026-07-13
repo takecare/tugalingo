@@ -15,10 +15,11 @@ A long lesson curriculum (translate a sentence, pick from a word bank, listen an
 
 "Match single emoji to gendered word" is one *question type*, not the only shape this game can take. Question types are a registry: each is a self-contained pair of a data generator (`src/lib/questionTypes/`) and a renderer (`src/components/questions/`), looked up by a `type` string. `Lesson.jsx` runs the round loop (progress bar, extend rule, in-lesson streak) without knowing or caring what kind of question it's showing, so adding a type is additive — a new file plus one registry line — rather than a rewrite of the lesson loop. See [architecture.md](architecture.md#question-types) for the file layout and [data-model.md](data-model.md#question-schema) for the exact `Question`/`Answer` shape.
 
-Six types exist:
+Seven types exist:
 
 - **`emoji-match`** — the original mechanic (see [above](#core-round-loop)). Recognition: see a concept, pick the word.
 - **`reverse-match`** — the mirror: the word is the prompt, four emoji are the choices. This is recall rather than recognition (harder — you can't lean on eliminating obviously-wrong emoji the way you can eliminate obviously-wrong words), so it's unlocked a little after `emoji-match`.
+- **`phrase-match`** — a conversational cue (emoji + a short Portuguese phrase) as the prompt, pick the natural reply (see [below](#conversational-phrases-via-phrase-match)).
 - **`compound-match`** — multiple emoji together as one prompt, for concepts a single emoji can't represent (see [below](#compound-concepts-via-compound-match)).
 - **`type-in`** — an emoji prompt again, but the player types the Portuguese word instead of picking it. Production instead of recognition, which is a bigger jump in difficulty than `reverse-match` — get it right without four options to narrow it down. Checked accent- and case-insensitively (`typeIn.js`'s `normalize()`), so a learner without easy access to ã/ç/õ on their keyboard isn't marked wrong for the accent alone, only for the word itself.
 - **`gender-match`** — an emoji plus a ♂/♀ symbol as the prompt, for animal words with a genuinely different form per sex (see [below](#animal-sex-via-gender-match)).
@@ -26,13 +27,21 @@ Six types exist:
 
 ### Question types unlock gradually
 
-None of the newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `compound-match` after 4, `type-in` after 5, `gender-match` after 6, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `compound-match` introduces new but small content that's more fun once the basic prompt-then-choose pattern is familiar; `gender-match` needs the base word from `emoji-match` to already be comfortable, since it's now testing a second, related word on top of it; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
+None of the newer types are in the mix from lesson one — `activeQuestionTypes(progress)` in `src/lib/lessons.js` unlocks them by completed-lesson count: `reverse-match` after 2, `phrase-match` after 3, `compound-match` after 4, `type-in` after 5, `gender-match` after 6, `sentence-fill` after 8. The reasoning is the same as the word-level ramp below: showing every mechanic at once on day one is overwhelming, and the harder types build on comfort with the easier ones (`reverse-match` and `type-in` are harder versions of the *same* skill emoji-match teaches; `phrase-match` and `compound-match` each introduce new but small content that's more fun once the basic prompt-then-choose pattern is familiar; `gender-match` needs the base word from `emoji-match` to already be comfortable, since it's now testing a second, related word on top of it; `sentence-fill` is a different skill altogether that's easiest to take on once vocab itself isn't the bottleneck).
 
 ## Emoji variants
 
 Some concepts have more than one commonly-used emoji — a cat is just as much 🐱 as 🐈. Rather than pick one and stick with it, words that have a genuinely equivalent alternate list it in `emojiVariants` (`src/data/words.json`), and `pickEmoji(word)` (`src/lib/emoji.js`) picks at random between `emoji` and its variants *every time that word comes up*, across `emoji-match`, `reverse-match`, and `type-in`. The point is to stop the player from quietly memorizing "this exact glyph = this word" instead of "this concept = this word" — if 🐱 and 🐈 don't both mean *gato* to her, she hasn't really learned *gato*, she's learned to recognize one drawing.
 
 This is deliberately conservative: a variant has to be unambiguously the *same* word, not just a related one. 🐱/🐈 (cat) and 🍎/🍏 (apple, red or green) qualify; a polar bear emoji does not become a variant of `urso` (bear), because that arguably names a different animal in Portuguese too. When a word has no genuinely equivalent second emoji, it just doesn't get an `emojiVariants` list — most words in the bank are still single-emoji.
+
+## Conversational phrases, via phrase-match
+
+Every other question type is built around a single concept or word. `phrase-match` is the first to teach a whole functional exchange instead: an emoji sets the scene and a short Portuguese question or exclamation is the prompt (*"Como estás?"*), and the player picks the natural reply from four choices (*"Bem, obrigado."* vs. three other phrases' replies). This is closer to real conversation than any other type — the skill is "what do you say back," not "what does this word mean" — while still fitting the existing multiple-choice registry pattern exactly (`phraseMatch.js` is structurally almost identical to `sentenceFill.js`: an emoji, a short prompt, four text choices).
+
+Content (`src/data/phrases.json`) is a small, hand-picked set of common exchanges — greetings, thanks, introducing yourself, asking a price, asking where something is — starting with six pairs. Each entry's `reply` has to be unambiguous: a reply that could plausibly answer *two* different prompts in the bank would make the "wrong" distractor arguably correct, so pairs are chosen to avoid that the same way `compound-match`'s emoji sequences have to be unique (see below).
+
+This is also explicitly the first step toward a broader "conversational" mode — later, longer or more open-ended exchanges could build on this same phrase bank rather than starting from scratch. A true free-form conversation type (typing an arbitrary reply and having it judged) is a bigger, separate idea that would likely need an LLM/backend, which cuts against [why this app has no backend](architecture.md#why-no-backend) — `phrase-match` deliberately stays multiple-choice so it fits the same no-backend, static-content model as everything else.
 
 ## Compound concepts, via compound-match
 

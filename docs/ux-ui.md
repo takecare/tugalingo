@@ -46,6 +46,10 @@ Below that, the prompt and answer UI vary by question type (see [design.md](desi
 
   ![Reverse match](images/screen-reverse-match.png)
 
+- **`phrase-match`** — an emoji sets the scene, with a short Portuguese question or exclamation below it (e.g. *"Como estás?"*), and four reply options in the same 2×2 grid as `sentence-fill`.
+
+  ![Phrase match](images/screen-phrase-match.png)
+
 - **`compound-match`** — a short row of 2-3 emoji together as the prompt (e.g. a coffee cup next to two milk glasses), then four word/phrase options in the same 2×2 grid as `emoji-match`.
 
   ![Compound match](images/screen-compound-match.png)
@@ -67,7 +71,7 @@ Below that, the prompt and answer UI vary by question type (see [design.md](desi
 ![Correct feedback](images/screen-correct-feedback.png)
 ![Incorrect feedback](images/screen-incorrect-feedback.png)
 
-The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `compound-match`, `gender-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
+The chosen option highlights immediately (green for correct; red for incorrect with the actual correct option also turned green), all four options disable so a fast double-click can't double-answer, and the next round loads automatically after ~900ms. This applies the same way across every choice-based question type (`emoji-match`, `reverse-match`, `phrase-match`, `compound-match`, `gender-match`, `sentence-fill`) via a shared class helper (`optionClassName.js`) so the feedback always looks and feels the same regardless of what's being asked. `type-in` has no choices to highlight, so it colors the input's border instead (green/red) and shows the correct answer as text underneath when wrong.
 
 ## Screen: lesson results
 
