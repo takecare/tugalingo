@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useProgress } from './hooks/useProgress'
 import { currentStreak, dateKey } from './lib/dates'
 import { buildLessonContext, buildDebugLessonContext, activeQuestionTypes } from './lib/lessons'
-import { isDebugMode } from './lib/debug'
+import { isDebugMode, isStudioMode } from './lib/debug'
 import Lesson from './components/Lesson'
 import Home from './components/Home'
 import LessonResults from './components/LessonResults'
 import DebugMenu from './components/DebugMenu'
+import Studio from './components/Studio'
 import VersionBadge from './components/VersionBadge'
 import './App.css'
 
@@ -14,6 +15,7 @@ function App() {
   const { progress, recordLessonCompletion, replaceProgress } = useProgress()
   const [view, setView] = useState({ screen: 'home' })
   const debugMode = isDebugMode()
+  const studioMode = isStudioMode()
 
   function startLesson() {
     setView({
@@ -78,6 +80,15 @@ function App() {
     )
   }
 
+  if (view.screen === 'studio') {
+    return (
+      <div className="app">
+        <Studio onBack={() => setView({ screen: 'home' })} />
+        <VersionBadge />
+      </div>
+    )
+  }
+
   if (view.screen === 'results') {
     return (
       <div className="app">
@@ -104,6 +115,8 @@ function App() {
         onImportProgress={replaceProgress}
         debugMode={debugMode}
         onOpenDebug={() => setView({ screen: 'debug' })}
+        studioMode={studioMode}
+        onOpenStudio={() => setView({ screen: 'studio' })}
       />
       <VersionBadge />
     </div>

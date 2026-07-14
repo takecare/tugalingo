@@ -3,7 +3,15 @@ import ActivityHeatmap from './ActivityHeatmap'
 import { currentStreak, dateKey } from '../lib/dates'
 import { downloadProgress, parseProgressFile } from '../lib/progressFile'
 
-export default function Home({ progress, onStartLesson, onImportProgress, debugMode, onOpenDebug }) {
+export default function Home({
+  progress,
+  onStartLesson,
+  onImportProgress,
+  debugMode,
+  onOpenDebug,
+  studioMode,
+  onOpenStudio,
+}) {
   const fileInputRef = useRef(null)
   const [importMessage, setImportMessage] = useState(null)
 
@@ -70,6 +78,11 @@ export default function Home({ progress, onStartLesson, onImportProgress, debugM
         {debugMode && (
           <button className="progress-io__button" onClick={onOpenDebug}>
             Debug
+          </button>
+        )}
+        {studioMode && (
+          <button className="progress-io__button" onClick={onOpenStudio}>
+            Studio
           </button>
         )}
       </div>

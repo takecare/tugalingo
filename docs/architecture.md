@@ -21,12 +21,14 @@
 - **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`, `gender-match`, `phrase-match`).
 - **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `recentDays`, and `currentStreak`.
 - **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
-- **`src/lib/debug.js`** — `isDebugMode()`, whether `?debug=true` is in the URL (see [Debug mode](#debug-mode) below).
+- **`src/lib/debug.js`** — `isDebugMode()`/`isStudioMode()`, whether `?debug=true`/`?studio=true` is in the URL (see [Debug mode](#debug-mode) and [Content studio](#content-studio) below).
+- **`src/lib/studio.js`**, **`src/lib/studioPreview.js`**, **`src/lib/studioFile.js`** — the content studio's logic (see [Content studio](#content-studio) below).
 - **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
-- **`src/App.jsx`** is a tiny screen router with four states: `home`, `lesson`, `debug`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
-- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, the export/import buttons, and (in debug mode) the Debug button.
+- **`src/App.jsx`** is a tiny screen router with five states: `home`, `lesson`, `debug`, `studio`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
+- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, the export/import buttons, and (in debug/studio mode) the Debug/Studio buttons.
 - **`src/components/Lesson.jsx`** — plays one lesson: the round loop, the question-10 extend check, the progress bar. It knows nothing about *what kind* of question it's showing — it asks the registry for one and renders whatever comes back (see below).
 - **`src/components/DebugMenu.jsx`** — lists every question type for direct selection (see [Debug mode](#debug-mode) below).
+- **`src/components/Studio.jsx`** — the content studio's UI (see [Content studio](#content-studio) below).
 - **`src/components/questions/`** — one renderer component per question type, plus the registry (`QuestionRenderer`) that picks the right one, and `optionClassName.js`, a small shared helper so every choice-based renderer gets the same correct/incorrect/disabled styling without depending on each other.
 - **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion`, `CompoundMatchQuestion`, and `GenderMatchQuestion` (all have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`, `PhraseMatchQuestion`) render their own buttons since their content (an emoji, a bare word, a reply phrase) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
 - **`src/components/LessonResults.jsx`** — the post-lesson score screen, including the updated streak.
@@ -69,6 +71,18 @@ Picking a type starts a normal `Lesson` (same 10-question/extend-rule loop as an
 
 Debug lessons are also tagged `isDebug: true` on the `view` state in `App.jsx`, which `completeLesson` checks first: a debug lesson never calls `recordLessonCompletion`, and finishing (or exiting) one returns straight to the debug menu instead of the results screen — previewing a question type shouldn't add fake entries to real lesson history, streak, or the heatmap.
 
+## Content studio
+
+`isStudioMode()` (`src/lib/debug.js`) checks the URL for `?studio=true`, the same pattern as debug mode but a separate flag — one previews question types, the other edits the data files, and there's no reason to couple them. When it's on, `Home.jsx` renders a "Studio" button that opens `Studio.jsx`: a form-based editor, per content bank (words/verbs/compounds/phrases), that writes straight back to the real `src/data/*.json` files using the [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) — no manual copy-paste, no server. This only works in Chromium browsers (Chrome/Edge); `Studio.jsx` feature-detects (`supportsFileSystemAccess()` in `src/lib/studioFile.js`) and shows a plain message on unsupported browsers instead of a broken UI. A download-based fallback for those browsers is planned but not yet built.
+
+The logic is split three ways, same separation as the rest of the app (pure logic in `src/lib/`, browser-API wrapper kept thin, component is just wiring):
+
+- **`src/lib/studio.js`** — pure, unit-tested. `emptyDraft(bank)` gives a blank form for a bank; `draftToEntry(bank, draft)` converts the flat form state into the actual shape written to the JSON file (e.g. it only adds a `femaleForm` key at all if the checkbox is on and a word was actually typed, matching how the real data files only have that key where it applies); `entryToDraft(bank, entry)` is the inverse, used when clicking an existing entry in the list to edit it; `validateEntry(bank, entry, existingEntries, editingId)` checks required fields, a lowercase-hyphen-only `id`, and that the `id` isn't already used by a *different* entry.
+- **`src/lib/studioPreview.js`** — pure, unit-tested. `previewQuestionFor(bank, entry, pool)` builds a real `Question` object (same shape `src/lib/questionTypes/` produces) for whatever's currently in the form, so the preview panel hands it straight to the actual `<QuestionRenderer />` — the exact same rendering code a real lesson uses, not a separate preview-only look-alike. Each bank previews as its "primary" type (`words` as `emoji-match`, or `gender-match` if the draft has a female form; `verbs` as `sentence-fill`; `compounds` as `compound-match`; `phrases` as `phrase-match`), with distractors drawn from whatever else is currently loaded in that bank.
+- **`src/lib/studioFile.js`** — the thin File System Access API wrapper (`supportsFileSystemAccess()`, `openJsonFile(suggestedName)`, `writeJsonFile(handle, data)`). Not unit tested, same reasoning as `progressFile.js`'s `downloadProgress`: it's a real-browser-API call with nothing but wiring to test, verified manually instead (or with a mocked `window.showOpenFilePicker` in an end-to-end check, since Playwright can't drive the native OS file picker).
+
+`Studio.jsx` keeps one file handle per bank per session (opening `words.json` once, then switching to the Verbs tab and back, doesn't ask again) and holds the loaded entries in memory — nothing is written to disk until "Save to disk" is clicked, so adding/editing several entries and reviewing them in the list first is normal, not risky.
+
 ## Progress export/import
 
 `src/lib/progressFile.js` is plain, framework-free logic:
@@ -82,9 +96,9 @@ Debug lessons are also tagged `isDebug: true` on the `view` state in `App.jsx`, 
 
 Everything under `src/lib/` (and its `questionTypes/` subfolder) is plain, framework-free logic — no DOM, no React — which makes it straightforward to unit test in isolation with [Vitest](https://vitest.dev), without needing a browser or React Testing Library. Each module has a co-located `*.test.js` file (e.g. `src/lib/dates.test.js` next to `dates.js`).
 
-What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), the `?debug=true` check (`debug.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
+What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), the `?debug=true`/`?studio=true` checks (`debug.js`), the content studio's draft/entry conversion, validation, and preview-question building (`studio.js`, `studioPreview.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
 
-Deliberately not covered: React components (`src/components/`) and `progressFile.js`'s `downloadProgress` (needs a real DOM for `Blob`/`URL.createObjectURL`) — these are thin rendering/wiring layers verified manually in a real browser instead, since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
+Deliberately not covered: React components (`src/components/`), `progressFile.js`'s `downloadProgress`, and `studioFile.js`'s File System Access API calls (all need a real DOM/browser API with nothing but wiring to test) — these are thin rendering/wiring layers verified manually in a real browser instead (or with a mocked `window.showOpenFilePicker`, for the studio's save flow), since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
 
 `npm test` runs the suite once; `npm run test:watch` re-runs on file changes. CI (`.github/workflows/deploy.yml`) runs `npm test` before `npm run build`, so a broken test blocks deployment the same way a broken build would.
 
@@ -118,12 +132,16 @@ src/
     round.js               # pickRound() / shuffle()
     dates.js                # dateKey(), recentDays(), currentStreak()
     progressFile.js          # downloadProgress(), parseProgressFile()
-    debug.js                  # isDebugMode()
+    debug.js                  # isDebugMode(), isStudioMode()
+    studio.js                   # content studio: draft <-> entry, validateEntry()
+    studioPreview.js              # content studio: previewQuestionFor()
+    studioFile.js                   # content studio: File System Access API wrapper
   components/
-    Home.jsx                # home screen: streak + heatmap + New Lesson + export/import + Debug
+    Home.jsx                # home screen: streak + heatmap + New Lesson + export/import + Debug/Studio
     ActivityHeatmap.jsx      # calendar heatmap
     Lesson.jsx                # plays one lesson, question-type-agnostic
     DebugMenu.jsx              # debug mode: pick any question type directly
+    Studio.jsx                   # content studio: add/edit data-file entries with live preview
     questions/
       EmojiMatchQuestion.jsx   # renders emoji-match
       ReverseMatchQuestion.jsx  # renders reverse-match
@@ -137,7 +155,7 @@ src/
     OptionButton.jsx          # word-choice button (article + pt + gender)
     LessonResults.jsx          # post-lesson score + streak screen
     VersionBadge.jsx            # commit-SHA link, bottom corner, every screen
-  App.jsx                      # screen router (home / lesson / debug / results)
+  App.jsx                      # screen router (home / lesson / debug / studio / results)
   App.css                       # all styling
   index.css                      # theme variables, base styles
 ```

@@ -16,6 +16,7 @@ This is the first thing the player sees, and everything on it is progress-driven
 - **New Lesson button** — the only way to start playing. There's no lesson list, no numbering, no map to navigate.
 - **Export/Import progress** — two small secondary buttons below New Lesson, deliberately understated (plain outlined buttons, not accent-colored) so they don't compete with the primary action. See [below](#export--import-progress).
 - **Debug** — a third button in that same row, but only when the page was loaded with `?debug=true` in the URL; otherwise it doesn't render at all. See [below](#debug-mode).
+- **Studio** — a fourth button, same idea but gated on `?studio=true` instead. See [below](#content-studio).
 
 ![Home screen with a streak going](images/screen-home-with-streak.png)
 
@@ -38,6 +39,16 @@ See [architecture.md](architecture.md#why-no-backend) and [data-model.md](data-m
 Loading the app with `?debug=true` in the URL (e.g. `https://takecare.github.io/tugalingo/?debug=true`) reveals a "Debug" button on the home screen, which opens a plain list of every question type that exists — including ones the current player hasn't unlocked yet, and ones that need level-2 content even on a completely fresh profile. Picking one starts a normal lesson made up entirely of that type, so a specific mechanic can be previewed end-to-end without playing through the real unlock ramp first.
 
 A debug lesson plays out exactly like a real one (same 10-question loop, same extend rule, same feedback), but finishing or exiting it returns to this menu instead of the results screen, and nothing is written to progress — no streak, no heatmap cell, no lesson-history entry. It's purely a preview tool, not a way to grind fake progress. See [architecture.md](architecture.md#debug-mode) for how that's implemented.
+
+## Content studio
+
+![Content studio](images/screen-studio.png)
+
+Loading the app with `?studio=true` reveals a "Studio" button on the home screen (independent of `?debug=true` — the two can be combined, e.g. `?debug=true&studio=true`), which opens a small editor for adding or fixing vocabulary without hand-editing JSON. Four tabs, one per content bank (Words / Verbs / Compounds / Phrases); each starts with an "Open `<file>.json`" button that asks you to pick that actual file from the repo on disk.
+
+Once opened: a list of every entry currently in that file on the left (click one to load it into the form for editing), a schema-specific form in the middle (a verb's form has five conjugation fields, a word's has an optional "distinct female form" toggle, etc.), and a live preview on the right showing exactly how the entry would appear in a real lesson — the emoji, the article/gender badge, distractor options pulled from whatever else is currently loaded — because the preview is built from a real `Question` object handed to the same `<QuestionRenderer />` a real lesson uses, not a mockup.
+
+"Add entry"/"Save changes" only updates the in-memory list (with inline validation — required fields, a valid id, no duplicate ids) and clears the form for the next one; nothing touches the disk until "Save to disk" is clicked, so a batch of additions can be reviewed in the list before committing them to the file. Saving writes straight back to the exact file that was opened, via the browser's File System Access API — this only works in Chrome/Edge, and browsers that don't support it get a plain explanatory message instead of a broken editor. See [architecture.md](architecture.md#content-studio) for how the save mechanism and live preview work.
 
 ## Screen: playing a lesson
 
