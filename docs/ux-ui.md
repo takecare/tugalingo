@@ -15,6 +15,7 @@ This is the first thing the player sees, and everything on it is progress-driven
 - **Lifetime stat** — total lessons completed, ever.
 - **New Lesson button** — the only way to start playing. There's no lesson list, no numbering, no map to navigate.
 - **Export/Import progress** — two small secondary buttons below New Lesson, deliberately understated (plain outlined buttons, not accent-colored) so they don't compete with the primary action. See [below](#export--import-progress).
+- **Debug** — a third button in that same row, but only when the page was loaded with `?debug=true` in the URL; otherwise it doesn't render at all. See [below](#debug-mode).
 
 ![Home screen with a streak going](images/screen-home-with-streak.png)
 
@@ -29,6 +30,14 @@ Once a lesson is completed: the streak block updates and turns green, the heatma
 - Both read from and write to the same `progress` state as everything else (via `replaceProgress` in `useProgress.js`) — home, the streak, and the heatmap all reflect an import immediately, the same as finishing a lesson would.
 
 See [architecture.md](architecture.md#why-no-backend) and [data-model.md](data-model.md#progress-file-import--export) for why this exists: it's the workaround for there being no accounts or cross-device sync.
+
+## Debug mode
+
+![Debug menu](images/screen-debug-menu.png)
+
+Loading the app with `?debug=true` in the URL (e.g. `https://takecare.github.io/tugalingo/?debug=true`) reveals a "Debug" button on the home screen, which opens a plain list of every question type that exists — including ones the current player hasn't unlocked yet, and ones that need level-2 content even on a completely fresh profile. Picking one starts a normal lesson made up entirely of that type, so a specific mechanic can be previewed end-to-end without playing through the real unlock ramp first.
+
+A debug lesson plays out exactly like a real one (same 10-question loop, same extend rule, same feedback), but finishing or exiting it returns to this menu instead of the results screen, and nothing is written to progress — no streak, no heatmap cell, no lesson-history entry. It's purely a preview tool, not a way to grind fake progress. See [architecture.md](architecture.md#debug-mode) for how that's implemented.
 
 ## Screen: playing a lesson
 

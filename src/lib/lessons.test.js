@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ALL_QUESTION_TYPES,
   activeQuestionTypes,
+  buildDebugLessonContext,
   buildLessonContext,
   currentCompoundPool,
   currentPhrasePool,
@@ -47,6 +49,12 @@ describe('activeQuestionTypes', () => {
   })
 })
 
+describe('ALL_QUESTION_TYPES', () => {
+  it('lists every type, matching what eventually unlocks for a real player', () => {
+    expect(ALL_QUESTION_TYPES).toEqual(activeQuestionTypes(progressWithHistory(8)))
+  })
+})
+
 describe('word/verb/compound pools ramp with level', () => {
   it('level-2 content is excluded before LEVEL_2_UNLOCK_AFTER, included after', () => {
     const early = currentWordPool(progressWithHistory(0))
@@ -80,5 +88,17 @@ describe('buildLessonContext', () => {
     expect(context).toHaveProperty('compounds')
     expect(context).toHaveProperty('phrases')
     expect(context.words.length).toBeGreaterThan(0)
+  })
+})
+
+describe('buildDebugLessonContext', () => {
+  it('always returns the fully-unlocked (level 2) pool, regardless of real progress', () => {
+    const debugContext = buildDebugLessonContext()
+    const fullyProgressedContext = buildLessonContext(progressWithHistory(10))
+
+    expect(debugContext.words).toEqual(fullyProgressedContext.words)
+    expect(debugContext.verbs).toEqual(fullyProgressedContext.verbs)
+    expect(debugContext.compounds).toEqual(fullyProgressedContext.compounds)
+    expect(debugContext.phrases).toEqual(fullyProgressedContext.phrases)
   })
 })

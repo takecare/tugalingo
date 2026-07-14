@@ -21,10 +21,12 @@
 - **`src/lib/round.js`** picks a random target + 3 distractors from whatever pool it's handed; used by any multiple-choice question type (`emoji-match`, `reverse-match`, `sentence-fill`, `compound-match`, `gender-match`, `phrase-match`).
 - **`src/lib/dates.js`** has the date helpers shared by the progress hook and the home screen: `dateKey`, `recentDays`, and `currentStreak`.
 - **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
+- **`src/lib/debug.js`** — `isDebugMode()`, whether `?debug=true` is in the URL (see [Debug mode](#debug-mode) below).
 - **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
-- **`src/App.jsx`** is a tiny screen router with three states: `home`, `lesson`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
-- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, and the export/import buttons.
+- **`src/App.jsx`** is a tiny screen router with four states: `home`, `lesson`, `debug`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
+- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, the export/import buttons, and (in debug mode) the Debug button.
 - **`src/components/Lesson.jsx`** — plays one lesson: the round loop, the question-10 extend check, the progress bar. It knows nothing about *what kind* of question it's showing — it asks the registry for one and renders whatever comes back (see below).
+- **`src/components/DebugMenu.jsx`** — lists every question type for direct selection (see [Debug mode](#debug-mode) below).
 - **`src/components/questions/`** — one renderer component per question type, plus the registry (`QuestionRenderer`) that picks the right one, and `optionClassName.js`, a small shared helper so every choice-based renderer gets the same correct/incorrect/disabled styling without depending on each other.
 - **`src/components/OptionButton.jsx`** — presentational, used by `EmojiMatchQuestion`, `CompoundMatchQuestion`, and `GenderMatchQuestion` (all have article+pt+gender-shaped choices); the other choice-based renderers (`ReverseMatchQuestion`, `SentenceFillQuestion`, `PhraseMatchQuestion`) render their own buttons since their content (an emoji, a bare word, a reply phrase) doesn't fit that layout, but share its feedback-class logic via `optionClassName.js`.
 - **`src/components/LessonResults.jsx`** — the post-lesson score screen, including the updated streak.
@@ -57,6 +59,16 @@ Every question in a lesson is a plain data object plus a matching renderer, look
 
 A lesson is 10 questions minimum. At question 10, the running correct-count decides whether it extends — see [design.md](design.md#lesson-length-and-the-extend-rule) for the exact rule and the reasoning behind it.
 
+## Debug mode
+
+`isDebugMode()` (`src/lib/debug.js`) checks the URL for `?debug=true` on every render — it's not a persisted setting, so it never leaks into a normal session and there's nothing to remember to turn back off. When it's on, `Home.jsx` renders a "Debug" button alongside export/import that opens `DebugMenu.jsx`: a plain list of every question type (`ALL_QUESTION_TYPES` in `lessons.js`), regardless of whether a real player would have unlocked it yet.
+
+Picking a type starts a normal `Lesson` (same 10-question/extend-rule loop as any other lesson), but with two differences from `startLesson()`:
+- `questionTypes` is `[type]` instead of `activeQuestionTypes(progress)`, so every question in the round is the one type being previewed, not a mix.
+- The context comes from `buildDebugLessonContext()` instead of `buildLessonContext(progress)` — it fakes just enough history to unlock every `level` tier, so e.g. `gender-match` (which only draws from level-1/2 words with a `femaleForm`) can be previewed on a completely fresh profile with zero real lessons played.
+
+Debug lessons are also tagged `isDebug: true` on the `view` state in `App.jsx`, which `completeLesson` checks first: a debug lesson never calls `recordLessonCompletion`, and finishing (or exiting) one returns straight to the debug menu instead of the results screen — previewing a question type shouldn't add fake entries to real lesson history, streak, or the heatmap.
+
 ## Progress export/import
 
 `src/lib/progressFile.js` is plain, framework-free logic:
@@ -70,7 +82,7 @@ A lesson is 10 questions minimum. At question 10, the running correct-count deci
 
 Everything under `src/lib/` (and its `questionTypes/` subfolder) is plain, framework-free logic — no DOM, no React — which makes it straightforward to unit test in isolation with [Vitest](https://vitest.dev), without needing a browser or React Testing Library. Each module has a co-located `*.test.js` file (e.g. `src/lib/dates.test.js` next to `dates.js`).
 
-What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
+What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), the `?debug=true` check (`debug.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
 
 Deliberately not covered: React components (`src/components/`) and `progressFile.js`'s `downloadProgress` (needs a real DOM for `Blob`/`URL.createObjectURL`) — these are thin rendering/wiring layers verified manually in a real browser instead, since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
 
@@ -106,10 +118,12 @@ src/
     round.js               # pickRound() / shuffle()
     dates.js                # dateKey(), recentDays(), currentStreak()
     progressFile.js          # downloadProgress(), parseProgressFile()
+    debug.js                  # isDebugMode()
   components/
-    Home.jsx                # home screen: streak + heatmap + New Lesson + export/import
+    Home.jsx                # home screen: streak + heatmap + New Lesson + export/import + Debug
     ActivityHeatmap.jsx      # calendar heatmap
     Lesson.jsx                # plays one lesson, question-type-agnostic
+    DebugMenu.jsx              # debug mode: pick any question type directly
     questions/
       EmojiMatchQuestion.jsx   # renders emoji-match
       ReverseMatchQuestion.jsx  # renders reverse-match
@@ -123,7 +137,7 @@ src/
     OptionButton.jsx          # word-choice button (article + pt + gender)
     LessonResults.jsx          # post-lesson score + streak screen
     VersionBadge.jsx            # commit-SHA link, bottom corner, every screen
-  App.jsx                      # screen router (home / lesson / results)
+  App.jsx                      # screen router (home / lesson / debug / results)
   App.css                       # all styling
   index.css                      # theme variables, base styles
 ```

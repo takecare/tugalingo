@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useProgress } from './hooks/useProgress'
 import { currentStreak, dateKey } from './lib/dates'
-import { buildLessonContext, activeQuestionTypes } from './lib/lessons'
+import { buildLessonContext, buildDebugLessonContext, activeQuestionTypes } from './lib/lessons'
+import { isDebugMode } from './lib/debug'
 import Lesson from './components/Lesson'
 import Home from './components/Home'
 import LessonResults from './components/LessonResults'
+import DebugMenu from './components/DebugMenu'
 import VersionBadge from './components/VersionBadge'
 import './App.css'
 
 function App() {
   const { progress, recordLessonCompletion, replaceProgress } = useProgress()
   const [view, setView] = useState({ screen: 'home' })
+  const debugMode = isDebugMode()
 
   function startLesson() {
     setView({
@@ -20,7 +23,21 @@ function App() {
     })
   }
 
+  function startDebugLesson(type) {
+    setView({
+      screen: 'lesson',
+      context: buildDebugLessonContext(),
+      questionTypes: [type],
+      isDebug: true,
+    })
+  }
+
   function completeLesson(result) {
+    if (view.isDebug) {
+      setView({ screen: 'debug' })
+      return
+    }
+
     const bestBefore = progress.history.reduce((best, h) => Math.max(best, h.correct / h.total), -Infinity)
     const isNewBest = progress.history.length > 0 && result.correct / result.total > bestBefore
 
@@ -44,9 +61,18 @@ function App() {
         <Lesson
           context={view.context}
           questionTypes={view.questionTypes}
-          onExit={() => setView({ screen: 'home' })}
+          onExit={() => setView({ screen: view.isDebug ? 'debug' : 'home' })}
           onComplete={completeLesson}
         />
+        <VersionBadge />
+      </div>
+    )
+  }
+
+  if (view.screen === 'debug') {
+    return (
+      <div className="app">
+        <DebugMenu onSelectType={startDebugLesson} onBack={() => setView({ screen: 'home' })} />
         <VersionBadge />
       </div>
     )
@@ -72,7 +98,13 @@ function App() {
         <h1>tugalingo</h1>
         <p>learn Portuguese, one lesson at a time</p>
       </header>
-      <Home progress={progress} onStartLesson={startLesson} onImportProgress={replaceProgress} />
+      <Home
+        progress={progress}
+        onStartLesson={startLesson}
+        onImportProgress={replaceProgress}
+        debugMode={debugMode}
+        onOpenDebug={() => setView({ screen: 'debug' })}
+      />
       <VersionBadge />
     </div>
   )

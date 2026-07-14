@@ -40,6 +40,10 @@ export function activeQuestionTypes(progress) {
   return QUESTION_TYPE_UNLOCKS.filter((u) => n >= u.after).map((u) => u.type)
 }
 
+// Every question type that exists, regardless of unlock status — used by
+// debug mode (see src/lib/debug.js) to list every type for direct selection.
+export const ALL_QUESTION_TYPES = QUESTION_TYPE_UNLOCKS.map((u) => u.type)
+
 // The first few lessons ever played stick to level-1 words only; after that,
 // the full pool is in play. Adding more `level` tiers to words.json extends
 // the ramp further.
@@ -76,4 +80,12 @@ export function buildLessonContext(progress) {
     compounds: currentCompoundPool(progress),
     phrases: currentPhrasePool(progress),
   }
+}
+
+// A fully-unlocked context (every level, regardless of the real player's
+// progress) for debug mode — previewing a question type shouldn't depend on
+// having actually played enough lessons to unlock its full content pool.
+export function buildDebugLessonContext() {
+  const fullyUnlocked = { history: Array(LEVEL_2_UNLOCK_AFTER).fill({}), activityByDate: {} }
+  return buildLessonContext(fullyUnlocked)
 }
