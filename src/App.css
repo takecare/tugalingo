@@ -532,8 +532,14 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.option:hover:not(:disabled) {
-  border-color: var(--accent);
+/* Scoped to real pointing devices: on touch, a tapped option can be left in a
+   synthetic :hover state that doesn't clear until the next tap elsewhere, so
+   the next question's button at that same screen position looks highlighted
+   even though nothing was tapped this round. */
+@media (hover: hover) and (pointer: fine) {
+  .option:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
 }
 
 .option:disabled {
