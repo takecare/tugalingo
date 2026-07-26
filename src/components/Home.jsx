@@ -11,6 +11,11 @@ export default function Home({
   onOpenDebug,
   studioMode,
   onOpenStudio,
+  userEmail,
+  onSignOut,
+  migrationAvailable,
+  onMigrate,
+  onDismissMigration,
 }) {
   const fileInputRef = useRef(null)
   const [importMessage, setImportMessage] = useState(null)
@@ -46,6 +51,20 @@ export default function Home({
 
   return (
     <div className="home">
+      {migrationAvailable && (
+        <div className="migration-banner">
+          <p>We found progress saved on this device from before accounts. Import it into your account?</p>
+          <div className="migration-banner__actions">
+            <button className="progress-io__button" onClick={onMigrate}>
+              Import it
+            </button>
+            <button className="progress-io__button" onClick={onDismissMigration}>
+              No thanks
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={doneToday ? 'streak streak--done' : 'streak'}>
         <div className="streak__count">
           🔥 {streak} <span className="streak__label">day streak</span>
@@ -87,6 +106,10 @@ export default function Home({
         )}
       </div>
       {importMessage && <p className="progress-io__message">{importMessage}</p>}
+
+      <p className="home__account">
+        Signed in as {userEmail} — <button className="home__sign-out" onClick={onSignOut}>Sign out</button>
+      </p>
     </div>
   )
 }

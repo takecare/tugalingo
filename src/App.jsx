@@ -1,21 +1,42 @@
 import { useState } from 'react'
+import { useAuth } from './hooks/useAuth'
 import { useProgress } from './hooks/useProgress'
 import { currentStreak, dateKey } from './lib/dates'
 import { buildLessonContext, buildDebugLessonContext, activeQuestionTypes } from './lib/lessons'
 import { isDebugMode, isStudioMode } from './lib/debug'
+import { isSupabaseConfigured } from './lib/supabaseClient'
+import { readLocalProgress, isMigrationDismissed, dismissMigration } from './lib/localProgress'
 import Lesson from './components/Lesson'
 import Home from './components/Home'
 import LessonResults from './components/LessonResults'
 import DebugMenu from './components/DebugMenu'
 import Studio from './components/Studio'
+import Login from './components/Login'
 import VersionBadge from './components/VersionBadge'
 import './App.css'
 
 function App() {
-  const { progress, recordLessonCompletion, replaceProgress } = useProgress()
+  const { session, isLoading: authLoading, signInWithEmail, signOut } = useAuth()
+  const userId = session?.user?.id ?? null
+  const { progress, isLoading: progressLoading, recordLessonCompletion, replaceProgress } = useProgress(userId)
   const [view, setView] = useState({ screen: 'home' })
+  const [localProgress] = useState(readLocalProgress)
+  const [migrationDismissed, setMigrationDismissed] = useState(isMigrationDismissed)
   const debugMode = isDebugMode()
   const studioMode = isStudioMode()
+
+  const migrationAvailable = Boolean(localProgress) && !migrationDismissed && progress.history.length === 0
+
+  function handleMigrate() {
+    replaceProgress(localProgress)
+    dismissMigration()
+    setMigrationDismissed(true)
+  }
+
+  function handleDismissMigration() {
+    dismissMigration()
+    setMigrationDismissed(true)
+  }
 
   function startLesson() {
     setView({
@@ -55,6 +76,30 @@ function App() {
 
     recordLessonCompletion(result.correct, result.total)
     setView({ screen: 'results', result, isNewBest, streak })
+  }
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="app">
+        <p>Supabase isn't configured — copy .env.example to .env and fill in your project's credentials.</p>
+      </div>
+    )
+  }
+
+  if (authLoading || (session && progressLoading)) {
+    return (
+      <div className="app">
+        <p>Loading…</p>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="app">
+        <Login onSignIn={signInWithEmail} />
+      </div>
+    )
   }
 
   if (view.screen === 'lesson') {
@@ -117,6 +162,11 @@ function App() {
         onOpenDebug={() => setView({ screen: 'debug' })}
         studioMode={studioMode}
         onOpenStudio={() => setView({ screen: 'studio' })}
+        userEmail={session.user.email}
+        onSignOut={signOut}
+        migrationAvailable={migrationAvailable}
+        onMigrate={handleMigrate}
+        onDismissMigration={handleDismissMigration}
       />
       <VersionBadge />
     </div>

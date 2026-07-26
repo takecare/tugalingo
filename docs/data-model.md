@@ -127,9 +127,21 @@ An `Answer` is whatever the player submitted, passed to `checkAnswer(question, a
 
 **Adding a question type** means adding `src/lib/questionTypes/<type>.js` (exporting `type`, `generate(context, avoidWordId)`, `isCorrect(question, answer)`) and `src/components/questions/<Type>Question.jsx` (rendering `{ question, feedback, onAnswer }`), then registering both in their respective `index` files. Listing the new type in `QUESTION_TYPE_UNLOCKS` (`src/lib/lessons.js`) puts it into rotation once the chosen lesson-count threshold is reached — see [design.md](design.md#question-types) for the current thresholds and why they're staggered rather than all unlocked at once.
 
-## Progress — `localStorage["tugalingo-progress"]`
+## Progress — Supabase `progress` table
 
-Written by `src/hooks/useProgress.js`, read back on every page load.
+Written by `src/hooks/useProgress.js`, read back once on sign-in. Schema (`supabase/schema.sql`):
+
+```sql
+create table progress (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  history jsonb not null default '[]',
+  activity_by_date jsonb not null default '{}',
+  timezone text not null default 'Europe/Lisbon',
+  updated_at timestamptz not null default now()
+);
+```
+
+One row per signed-in user, RLS-restricted to `auth.uid() = user_id` for every operation — a user can only ever read or write their own row, enforced by Postgres rather than app code. `history`/`activity_by_date` are the exact same shape the app used when this lived in `localStorage`:
 
 ```json
 {
@@ -149,10 +161,11 @@ Written by `src/hooks/useProgress.js`, read back on every page load.
 | `history[i].correct` / `total` | That attempt's score, kept as a fraction rather than a percentage so the fact that a lesson may have extended (10 vs 12 vs 14 questions) stays visible. A personal-best comparison (shown on the results screen) is `correct / total` across the whole array, not a stored field — computed fresh each time so it can't drift out of sync with `history`. |
 | `history[i].completedAt` | ISO timestamp of that completion. |
 | `activityByDate["<YYYY-MM-DD>"].lessonsCompleted` | How many lessons were completed on that calendar day, keyed by the player's local date (`src/lib/dates.js#dateKey`). Drives the heatmap; the current streak (`src/lib/dates.js#currentStreak`) is also computed from this object on the fly rather than stored, for the same reason — it can never disagree with the record it's derived from. |
+| `timezone` | Not yet used by anything client-side (which always uses the browser's local date). Reserved for the planned reminder-notification job, which needs to know each user's "today" without a browser to ask. |
 
-A lesson only writes to this object once it's *completed* — exiting mid-lesson (the ✕ button) records nothing, so an abandoned attempt never counts toward `history`, a day's activity count, or the streak.
+A lesson only writes to this row once it's *completed* — exiting mid-lesson (the ✕ button) records nothing, so an abandoned attempt never counts toward `history`, a day's activity count, or the streak.
 
-This is **per-browser, not per-player** — there's no login, so switching browsers/devices starts fresh (see [architecture.md](architecture.md#why-no-backend) for the tradeoff) unless it's moved manually — see below.
+This is now **per-account**, synced across every device signed into the same user — see [architecture.md](architecture.md#accounts--cloud-progress-sync) for the auth flow and the seam that made swapping `localStorage` for this straightforward. Progress created before accounts existed (in the old `localStorage["tugalingo-progress"]` key) is offered as a one-time import on first sign-in if the server-side row is still empty — see `src/lib/localProgress.js`.
 
 Session-only state (current round, in-lesson streak, current question index/total) lives in `Lesson.jsx`'s React state and is *not* persisted — it's discarded the moment a lesson ends or is exited, since only completed lessons are meaningful history.
 

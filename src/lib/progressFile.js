@@ -21,7 +21,7 @@ function isValidActivity(activityByDate) {
   )
 }
 
-function isValidProgress(data) {
+export function isValidProgress(data) {
   return data !== null && typeof data === 'object' && isValidHistory(data.history) && isValidActivity(data.activityByDate)
 }
 

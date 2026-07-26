@@ -6,9 +6,9 @@
 |---|---|---|
 | UI framework | React + Vite | Component-based, fast dev server, scales cleanly as more screens/modes get added. |
 | State | React `useState`/`useMemo`, no external store | The state graph is small (current screen, current lesson's round/progress) — a store like Redux/Zustand would be overhead for this size. |
-| Persistence | Browser `localStorage` | No login needed for a two-person project; progress just needs to survive a page reload on the same device/browser. |
+| Accounts + persistence | [Supabase](https://supabase.com) (Postgres + Auth, magic-link email sign-in) | Progress now syncs across devices under a real account — see [Accounts & cloud progress sync](#accounts--cloud-progress-sync) below. Free tier easily covers a two-person app; picked over Firebase because Firebase's scheduled Cloud Functions (needed for reminder notifications) require the paid Blaze plan just to deploy, even at zero usage. |
 | Content | Static JSON (`src/data/words.json`, `src/data/verbs.json`, `src/data/compounds.json`) | Word/verb/compound banks are hand-curated and small; no need for a database or CMS. |
-| Hosting | Static site (Vercel/Netlify/GitHub Pages) | The whole app is a static bundle — no backend to run or pay for. |
+| Hosting | Static site (GitHub Pages) | The frontend is still a static bundle — Supabase *is* the backend, fully managed, nothing to run or pay for ourselves. |
 
 ## Component / data flow
 
@@ -23,9 +23,13 @@
 - **`src/lib/progressFile.js`** — `downloadProgress(progress)` and `parseProgressFile(file)`, the export/import logic (see [Progress export/import](#progress-exportimport) below).
 - **`src/lib/debug.js`** — `isDebugMode()`/`isStudioMode()`, whether `?debug=true`/`?studio=true` is in the URL (see [Debug mode](#debug-mode) and [Content studio](#content-studio) below).
 - **`src/lib/studio.js`**, **`src/lib/studioPreview.js`**, **`src/lib/studioFile.js`** — the content studio's logic (see [Content studio](#content-studio) below).
-- **`src/hooks/useProgress.js`** owns everything persisted: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import. Exiting a lesson early calls neither.
-- **`src/App.jsx`** is a tiny screen router with five states: `home`, `lesson`, `debug`, `studio`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
-- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, the export/import buttons, and (in debug/studio mode) the Debug/Studio buttons.
+- **`src/lib/supabaseClient.js`** — creates the shared Supabase client from `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (or `null` if unset, guarded by `isSupabaseConfigured()`). See [Accounts & cloud progress sync](#accounts--cloud-progress-sync).
+- **`src/lib/localProgress.js`** — reads whatever's left in `localStorage` from before accounts existed, for the one-time migration prompt (see below).
+- **`src/hooks/useAuth.js`** — wraps Supabase Auth: the current `session` (`undefined` while resolving, `null` signed out), `signInWithEmail(email)` (magic link), `signOut()`.
+- **`src/hooks/useProgress.js`** owns everything persisted, keyed by the signed-in user: the full history of completed lessons and which calendar days had activity. It exposes two write paths — `recordLessonCompletion(correct, total)`, called once when a lesson finishes, and `replaceProgress(newProgress)`, called on a successful import or migration. Exiting a lesson early calls neither.
+- **`src/App.jsx`** first gates on Supabase being configured, then on auth (`useAuth`) and progress (`useProgress`) both being loaded, then on a session existing (rendering `Login` if not) — only past all three does it become the familiar screen router with five states: `home`, `lesson`, `debug`, `studio`, `results`. It's also where a lesson's content (`buildLessonContext`) and unlocked question types (`activeQuestionTypes`) are picked the moment "New Lesson" is pressed, and where the streak shown on the results screen is computed. No game logic lives here beyond that wiring.
+- **`src/components/Login.jsx`** — the magic-link sign-in form shown when there's no session.
+- **`src/components/Home.jsx`** — the home screen: streak header, `ActivityHeatmap`, the "New Lesson" button, the export/import buttons, (in debug/studio mode) the Debug/Studio buttons, the signed-in-as/sign-out footer, and the one-time local-progress migration banner.
 - **`src/components/Lesson.jsx`** — plays one lesson: the round loop, the question-10 extend check, the progress bar. It knows nothing about *what kind* of question it's showing — it asks the registry for one and renders whatever comes back (see below).
 - **`src/components/DebugMenu.jsx`** — lists every question type for direct selection (see [Debug mode](#debug-mode) below).
 - **`src/components/Studio.jsx`** — the content studio's UI (see [Content studio](#content-studio) below).
@@ -90,21 +94,28 @@ The logic is split three ways, same separation as the rest of the app (pure logi
 - `downloadProgress(progress)` — serializes the `progress` object to a JSON `Blob` and triggers a browser download via a throwaway `<a download>` element. No confirmation, since exporting is non-destructive.
 - `parseProgressFile(file)` — reads a `File` (from a file `<input>`), `JSON.parse`s it, and validates the result actually has the progress shape (an array `history` of `{ completedAt, correct, total }` and an object `activityByDate` of `{ lessonsCompleted }`) before returning it. Throws a descriptive `Error` on anything that doesn't match, which `Home.jsx` catches and displays inline — nothing is ever applied to `progress` from an unvalidated file.
 
-`Home.jsx` wires these to a hidden file `<input>` and a native `window.confirm()` (the only confirmation dialog in the app, since import is the only destructive action — it fully replaces `progress` via `replaceProgress`). See [data-model.md](data-model.md#progress-file-import--export) for the exact validation rules and [ux-ui.md](ux-ui.md#export--import-progress) for the UI.
+`Home.jsx` wires these to a hidden file `<input>` and a native `window.confirm()` (the only confirmation dialog in the app, since import is the only destructive action — it fully replaces `progress` via `replaceProgress`). See [data-model.md](data-model.md#progress-file-import--export) for the exact validation rules and [ux-ui.md](ux-ui.md#export--import-progress) for the UI. This still works exactly as before now that progress is cloud-synced — it's a manual backup/transfer path alongside the automatic one.
+
+## Accounts & cloud progress sync
+
+Progress now lives in Supabase Postgres, one row per user, instead of only in `localStorage`. This is what makes cross-device sync and (eventually) reminder notifications possible — see [data-model.md](data-model.md#progress--supabase-progress-table) for the exact schema and RLS policy.
+
+- **Auth**: magic-link email sign-in only (`supabase.auth.signInWithOtp` via `useAuth.js`) — no password to set, reset, or leak, and Supabase auto-creates the `auth.users` row on first use. There's no separate registration flow.
+- **`App.jsx` gating**: before rendering the normal screen router, it checks (in order) that Supabase is configured (`isSupabaseConfigured()`), that auth has resolved (`useAuth`'s `isLoading`), that a session exists (else renders `Login.jsx`), and that progress has loaded (`useProgress`'s `isLoading`). Only past all four does `home`/`lesson`/etc. render.
+- **`useProgress(userId)`** keeps the exact same external interface it had with `localStorage` (`progress`, `recordLessonCompletion`, `replaceProgress`) — this was the seam the app was already built around, and it held up: `Lesson.jsx`, `Home.jsx`, and `LessonResults.jsx` needed no changes. What's different internally: the initial load is now an async `select` (hence the new `isLoading` flag) instead of a synchronous `localStorage.getItem`, and every write is a Postgres `upsert` instead of a synchronous `localStorage.setItem`. One real tradeoff: recording a completed lesson now requires a network connection — there's no offline write buffer in this version.
+- **Row Level Security**: the `progress` table (and any future per-user table) has RLS enabled with a single `auth.uid() = user_id` policy for all operations, so a user can only ever read or write their own row — enforced by Postgres, not app code.
+- **Migrating pre-accounts local progress**: `src/lib/localProgress.js`'s `readLocalProgress()` checks for real progress left in `localStorage` from before this feature existed (same validation as file import, via `progressFile.js`'s `isValidProgress`). If found, and the signed-in user's server-side history is still empty, `Home.jsx` shows a one-time banner offering to import it (`App.jsx`'s `handleMigrate`, which just calls `replaceProgress`) or dismiss it permanently (`dismissMigration()`, a `localStorage` flag so it doesn't nag on every load).
+- **Why Supabase over a custom server or Firebase**: no server to run or pay for — Supabase's free tier (Postgres + Auth) is a fully managed backend, and its Edge Functions support free scheduled ("cron") execution, which Firebase's equivalent (Cloud Functions) doesn't without the paid Blaze plan — relevant for the reminder-notification feature this groundwork exists for. Frontend hosting is unchanged (still a static bundle on GitHub Pages).
 
 ## Tests
 
 Everything under `src/lib/` (and its `questionTypes/` subfolder) is plain, framework-free logic — no DOM, no React — which makes it straightforward to unit test in isolation with [Vitest](https://vitest.dev), without needing a browser or React Testing Library. Each module has a co-located `*.test.js` file (e.g. `src/lib/dates.test.js` next to `dates.js`).
 
-What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), the `?debug=true`/`?studio=true` checks (`debug.js`), the content studio's draft/entry conversion, validation, and preview-question building (`studio.js`, `studioPreview.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
+What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`), progress file validation (`progressFile.js`), the pre-accounts local-progress migration check (`localProgress.js`), the `?debug=true`/`?studio=true` checks (`debug.js`), the content studio's draft/entry conversion, validation, and preview-question building (`studio.js`, `studioPreview.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks as an end-to-end sanity check that the actual content is well-formed.
 
-Deliberately not covered: React components (`src/components/`), `progressFile.js`'s `downloadProgress`, and `studioFile.js`'s File System Access API calls (all need a real DOM/browser API with nothing but wiring to test) — these are thin rendering/wiring layers verified manually in a real browser instead (or with a mocked `window.showOpenFilePicker`, for the studio's save flow), since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
+Deliberately not covered: React components (`src/components/`), `progressFile.js`'s `downloadProgress`, `studioFile.js`'s File System Access API calls, and `useAuth.js`/`useProgress.js`'s actual Supabase network calls (all need a real DOM/browser API or a real backend with nothing but wiring to test) — these are thin rendering/wiring layers verified manually in a real browser instead (or with mocked network requests, for the studio's save flow and the login form's OTP call), since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
 
 `npm test` runs the suite once; `npm run test:watch` re-runs on file changes. CI (`.github/workflows/deploy.yml`) runs `npm test` before `npm run build`, so a broken test blocks deployment the same way a broken build would.
-
-## Why no backend
-
-The two questions that usually justify a backend — "does progress need to sync across devices?" and "does someone need to log in?" — were both answered no. `useProgress.js` is the single seam to swap if that changes later: it already isolates all read/write of progress behind `progress`, `recordLessonCompletion`, and `replaceProgress`, so replacing `localStorage` with an API call wouldn't touch `Lesson.jsx`, `Home.jsx`, or `LessonResults.jsx`. Export/import (above) is the manual, no-backend stand-in for cross-device sync in the meantime.
 
 ## Folder structure
 
@@ -116,10 +127,13 @@ src/
     compounds.json        # multi-emoji compound-concept bank
     phrases.json           # conversational prompt/reply bank
   hooks/
-    useProgress.js       # persisted lesson history + daily activity
+    useAuth.js            # Supabase session, signInWithEmail(), signOut()
+    useProgress.js         # persisted lesson history + daily activity, Supabase-backed
   lib/
-    lessons.js            # pools, buildLessonContext(), activeQuestionTypes(), extend rule
-    emoji.js               # pickEmoji() — random emoji variant per question
+    lessons.js              # pools, buildLessonContext(), activeQuestionTypes(), extend rule
+    emoji.js                 # pickEmoji() — random emoji variant per question
+    supabaseClient.js          # shared Supabase client, isSupabaseConfigured()
+    localProgress.js             # pre-accounts localStorage migration check
     questionTypes/
       emojiMatch.js         # emoji -> pick the word
       reverseMatch.js        # word -> pick the emoji
@@ -137,11 +151,12 @@ src/
     studioPreview.js              # content studio: previewQuestionFor()
     studioFile.js                   # content studio: File System Access API wrapper
   components/
-    Home.jsx                # home screen: streak + heatmap + New Lesson + export/import + Debug/Studio
-    ActivityHeatmap.jsx      # calendar heatmap
-    Lesson.jsx                # plays one lesson, question-type-agnostic
-    DebugMenu.jsx              # debug mode: pick any question type directly
-    Studio.jsx                   # content studio: add/edit data-file entries with live preview
+    Login.jsx                # magic-link sign-in form
+    Home.jsx                  # home screen: streak + heatmap + New Lesson + export/import + Debug/Studio + account
+    ActivityHeatmap.jsx        # calendar heatmap
+    Lesson.jsx                  # plays one lesson, question-type-agnostic
+    DebugMenu.jsx                # debug mode: pick any question type directly
+    Studio.jsx                     # content studio: add/edit data-file entries with live preview
     questions/
       EmojiMatchQuestion.jsx   # renders emoji-match
       ReverseMatchQuestion.jsx  # renders reverse-match
@@ -161,3 +176,5 @@ src/
 ```
 
 (Not shown above: every file directly under `lib/` and `lib/questionTypes/` has a co-located `*.test.js` — see [Tests](#tests).)
+
+Outside `src/`: `supabase/schema.sql` is the `progress` table + RLS policy, run once against the Supabase project's Postgres via the SQL Editor (or `psql`); `.env.example` documents the two Vite env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) needed in `.env` locally and as GitHub Actions repo secrets for the deploy workflow.

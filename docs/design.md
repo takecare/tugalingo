@@ -41,7 +41,7 @@ Every other question type is built around a single concept or word. `phrase-matc
 
 Content (`src/data/phrases.json`) is a small, hand-picked set of common exchanges — greetings, thanks, introducing yourself, asking a price, asking where something is — starting with six pairs. Each entry's `reply` has to be unambiguous: a reply that could plausibly answer *two* different prompts in the bank would make the "wrong" distractor arguably correct, so pairs are chosen to avoid that the same way `compound-match`'s emoji sequences have to be unique (see below).
 
-This is also explicitly the first step toward a broader "conversational" mode — later, longer or more open-ended exchanges could build on this same phrase bank rather than starting from scratch. A true free-form conversation type (typing an arbitrary reply and having it judged) is a bigger, separate idea that would likely need an LLM/backend, which cuts against [why this app has no backend](architecture.md#why-no-backend) — `phrase-match` deliberately stays multiple-choice so it fits the same no-backend, static-content model as everything else.
+This is also explicitly the first step toward a broader "conversational" mode — later, longer or more open-ended exchanges could build on this same phrase bank rather than starting from scratch. A true free-form conversation type (typing an arbitrary reply and having it judged) is a bigger, separate idea that would need an LLM in the loop, not just the CRUD-style [Supabase backend](architecture.md#accounts--cloud-progress-sync) this app has — `phrase-match` deliberately stays multiple-choice so it fits the same static-content model as everything else.
 
 ## Compound concepts, via compound-match
 
@@ -111,6 +111,6 @@ A lesson only counts for the streak/heatmap if it's completed — see [above](#n
 ## Non-goals for v1
 
 - No audio/pronunciation.
-- No accounts — see [architecture.md](architecture.md#why-no-backend).
+- No password auth — magic-link email only, see [architecture.md](architecture.md#accounts--cloud-progress-sync).
 - No lives/hearts system — an incorrect answer costs streak, not a life, since there's no "game over" state to protect against.
 - No irregular verbs or tenses beyond present-tense regular `-ar` — see [above](#verb-conjugation-via-sentence-fill).

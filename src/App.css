@@ -114,6 +114,107 @@
   color: var(--text);
 }
 
+/* Sign-in */
+
+.login {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.login h1 {
+  font-size: 32px;
+  margin: 0;
+  text-transform: lowercase;
+}
+
+.login__form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.login__input {
+  font: inherit;
+  font-size: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.login__button {
+  font: inherit;
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.login__button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.login__error {
+  color: #e5484d;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Migration banner */
+
+.migration-banner {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.migration-banner p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.migration-banner__actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Account footer */
+
+.home__account {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.home__sign-out {
+  font: inherit;
+  font-size: 13px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Debug menu */
 
 .debug-menu {

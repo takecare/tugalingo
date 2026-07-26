@@ -6,11 +6,11 @@ A small European Portuguese vocabulary game: match an emoji to the Portuguese wo
 
 ![Home screen](docs/images/screen-home-with-streak.png)
 
-Press "New Lesson" to play — each lesson is a minimum of 10 questions, extending to 12-14 if you score well on the first 10. A day streak and an activity heatmap track daily play; progress is saved in the browser, and can be exported/imported as a JSON file (handy for moving to a new device, since there are no accounts). See [docs/design.md](docs/design.md#streak--daily-activity) for the reasoning behind the streak, and [docs/design.md](docs/design.md#lesson-length-and-the-extend-rule) for the exact extend rule.
+Sign in with your email (a magic link, no password) to play — press "New Lesson" for a lesson of a minimum of 10 questions, extending to 12-14 if you score well on the first 10. A day streak and an activity heatmap track daily play; progress syncs automatically across devices via your account, and can also be exported/imported as a JSON file as a manual backup. See [docs/design.md](docs/design.md#streak--daily-activity) for the reasoning behind the streak, and [docs/design.md](docs/design.md#lesson-length-and-the-extend-rule) for the exact extend rule.
 
 ## Running it locally
 
-Requires Node.js (18+).
+Requires Node.js (18+) and a [Supabase](https://supabase.com) project (free tier) — see [docs/architecture.md](docs/architecture.md#accounts--cloud-progress-sync) for the schema, or just copy `.env.example` to `.env` and fill in your project's URL/anon key after running `supabase/schema.sql` against it.
 
 ```bash
 npm install
@@ -30,13 +30,13 @@ npm run test:watch  # re-run tests on file changes
 
 ## Deploying
 
-Deployed automatically to GitHub Pages by `.github/workflows/deploy.yml` — every push to `main` builds with Vite and publishes `dist/`. No secrets or environment variables to configure.
+Deployed automatically to GitHub Pages by `.github/workflows/deploy.yml` — every push to `main` builds with Vite and publishes `dist/`. The build needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`, set as GitHub Actions repo secrets (`gh secret set`) rather than committed.
 
 To deploy elsewhere instead, `npm run build` produces the same static `dist/` folder, deployable to any static host (Vercel, Netlify, Cloudflare Pages, etc.) — just remember to drop or change the `base: '/tugalingo/'` path in `vite.config.js` if the site won't live under a `/tugalingo/` subpath.
 
 ## Docs
 
-- [Architecture](docs/architecture.md) — stack, component/data flow, why no backend
+- [Architecture](docs/architecture.md) — stack, component/data flow, accounts & cloud progress sync
 - [Design](docs/design.md) — game design decisions, the gender-badge mechanic, scope cuts
 - [UX / UI](docs/ux-ui.md) — screen-by-screen walkthrough with screenshots
 - [Data model](docs/data-model.md) — word bank schema and progress schema, how to add words

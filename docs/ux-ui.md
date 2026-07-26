@@ -26,11 +26,17 @@ Once a lesson is completed: the streak block updates and turns green, the heatma
 
 ![Home screen with export/import buttons](images/screen-home-export-import.png)
 
-- **Export progress** downloads the current `localStorage` progress object as a JSON file (`tugalingo-progress-<today's date>.json`) — no dialog, just an immediate browser download.
-- **Import progress** opens a native file picker. If the chosen file parses as a valid progress export, a browser `confirm()` warns that it will replace everything currently on this device before applying it — this is the one destructive action in the app, so it's the one place that interrupts with a confirmation. If the file doesn't parse, or doesn't look like a progress export, an inline message explains why and nothing is changed.
-- Both read from and write to the same `progress` state as everything else (via `replaceProgress` in `useProgress.js`) — home, the streak, and the heatmap all reflect an import immediately, the same as finishing a lesson would.
+- **Export progress** downloads the current progress object as a JSON file (`tugalingo-progress-<today's date>.json`) — no dialog, just an immediate browser download.
+- **Import progress** opens a native file picker. If the chosen file parses as a valid progress export, a browser `confirm()` warns that it will replace everything on the account before applying it — this is the one destructive action in the app, so it's the one place that interrupts with a confirmation. If the file doesn't parse, or doesn't look like a progress export, an inline message explains why and nothing is changed.
+- Both read from and write to the same `progress` state as everything else (via `replaceProgress` in `useProgress.js`, which now upserts to Supabase) — home, the streak, and the heatmap all reflect an import immediately, the same as finishing a lesson would.
 
-See [architecture.md](architecture.md#why-no-backend) and [data-model.md](data-model.md#progress-file-import--export) for why this exists: it's the workaround for there being no accounts or cross-device sync.
+Progress now syncs automatically across devices via the account (see [Signing in](#signing-in) below), so export/import is a secondary, manual backup/transfer tool rather than the only way to move progress around. See [data-model.md](data-model.md#progress--supabase-progress-table) for the schema.
+
+## Signing in
+
+Loading the app with no active session shows a plain email field and a "Send sign-in link" button — no password. Submitting sends a magic link and switches to a "Check `<email>` for a sign-in link" message; clicking that link in the inbox completes sign-in. Once signed in, the home screen gains a small "Signed in as `<email>` — Sign out" line beneath the export/import buttons.
+
+If this is the first sign-in on a device that has older, pre-accounts progress sitting in the browser (from before this feature existed), a banner appears above the streak block offering to import it into the account, or dismiss the offer permanently. See [architecture.md](architecture.md#accounts--cloud-progress-sync) for how the migration works.
 
 ## Debug mode
 
