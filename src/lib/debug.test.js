@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isDebugMode, isStudioMode } from './debug'
+import { isDebugMode } from './debug'
 
 describe('isDebugMode', () => {
   it('is true only for ?debug=true', () => {
@@ -23,14 +23,5 @@ describe('isDebugMode', () => {
 
   it('works alongside other query params', () => {
     expect(isDebugMode('?foo=bar&debug=true')).toBe(true)
-  })
-})
-
-describe('isStudioMode', () => {
-  it('is true only for ?studio=true, and independent of ?debug', () => {
-    expect(isStudioMode('?studio=true')).toBe(true)
-    expect(isStudioMode('?debug=true')).toBe(false)
-    expect(isStudioMode('?debug=true&studio=true')).toBe(true)
-    expect(isStudioMode('')).toBe(false)
   })
 })

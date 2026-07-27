@@ -1,10 +1,10 @@
 # Data model
 
-There are two pieces of data in the app: the static word bank, and the player's persisted progress.
+There are two pieces of data in the app: the word bank (content), and the player's persisted progress. Both live in Supabase now — see [architecture.md](architecture.md#content-studio) and [architecture.md](architecture.md#accounts--cloud-progress-sync).
 
-## Word bank — `src/data/words.json`
+## Word bank — `content_items` where `kind = 'words'`
 
-An array of word entries. Each entry:
+Originally `src/data/words.json`, and still shaped exactly the same — that file is now just the seed fixture (`scripts/seed-content.mjs`) and test data, not what the app reads at runtime. An array of word entries, each stored as one `content_items` row's `data` jsonb:
 
 | Field | Type | Example | Notes |
 |---|---|---|---|
@@ -25,26 +25,26 @@ Example entry:
 { "id": "gato", "pt": "gato", "en": "cat", "article": "o", "gender": "m", "emoji": "🐱", "emojiVariants": ["🐈"], "category": "animals", "level": 1, "femaleForm": { "article": "a", "pt": "gata" } }
 ```
 
-**Adding a word** is just appending an object with these fields (`emojiVariants` and `femaleForm` optional) — no schema/migration to run since it's a static file. Picking a *second* emoji for `emojiVariants` is a judgment call: it needs to be unambiguously the same word (🐱/🐈 are both just "cat"; a polar bear emoji would *not* be a valid variant for `urso`, since that's arguably a different word) — see [design.md](design.md#question-types) for more on this. `femaleForm` is an equally conservative judgment call — see [design.md](design.md#animal-sex-via-gender-match) for which pairs qualify and which are deliberately left out.
+**Adding a word** means adding a row via the content studio (admin accounts only — see [architecture.md](architecture.md#content-studio)) with these fields (`emojiVariants` and `femaleForm` optional) — no schema/migration to run, it's just an `upsert`. Picking a *second* emoji for `emojiVariants` is a judgment call: it needs to be unambiguously the same word (🐱/🐈 are both just "cat"; a polar bear emoji would *not* be a valid variant for `urso`, since that's arguably a different word) — see [design.md](design.md#question-types) for more on this. `femaleForm` is an equally conservative judgment call — see [design.md](design.md#animal-sex-via-gender-match) for which pairs qualify and which are deliberately left out.
 
 ### How `level` maps to lessons
 
-`src/lib/lessons.js` decides the word pool for the next lesson from how many lessons are already in the player's history:
+`src/lib/lessons.js` decides the word pool for the next lesson from how many lessons are already in the player's history, given the `content` bundle `useContent.js` loaded from Supabase:
 
 ```js
 const LEVEL_2_UNLOCK_AFTER = 3
 
-export function currentWordPool(progress) {
+export function currentWordPool(content, progress) {
   const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
-  return words.filter((w) => w.level <= cap)
+  return content.words.filter((w) => w.level <= cap)
 }
 ```
 
 The first 3 completed lessons draw only from `level: 1` words; from the 4th completed lesson onward, the pool is the full `level <= 2` set. See [design.md](design.md#word-difficulty-ramp) for the reasoning.
 
-## Verb bank — `src/data/verbs.json`
+## Verb bank — `content_items` where `kind = 'verbs'`
 
-An array of regular `-ar` present-tense verbs, used by the `sentence-fill` question type (see [design.md](design.md#question-types) for why conjugation needed its own content and question type rather than reusing `words.json`).
+Originally `src/data/verbs.json` (still the seed fixture/test data). An array of regular `-ar` present-tense verbs, used by the `sentence-fill` question type (see [design.md](design.md#question-types) for why conjugation needed its own content and question type rather than reusing the word bank).
 
 | Field | Type | Example | Notes |
 |---|---|---|---|
@@ -76,9 +76,9 @@ Example entry:
 
 **Adding a verb** is appending one of these objects — only regular `-ar` verbs fit the current content without changes; an irregular verb would still work data-wise (the five forms are just spelled out, not derived), it's only a curation choice to stick to regulars for now (see [design.md](design.md#question-types)).
 
-## Compound bank — `src/data/compounds.json`
+## Compound bank — `content_items` where `kind = 'compounds'`
 
-An array of concepts that only exist as a *combination* of emoji, used by the `compound-match` question type — e.g. coffee (☕) plus milk (🥛) isn't just "coffee and milk," it's a specific drink with its own Portuguese name (see [design.md](design.md#question-types) for why this needed its own content and question type rather than reusing `words.json`).
+Originally `src/data/compounds.json` (still the seed fixture/test data). An array of concepts that only exist as a *combination* of emoji, used by the `compound-match` question type — e.g. coffee (☕) plus milk (🥛) isn't just "coffee and milk," it's a specific drink with its own Portuguese name (see [design.md](design.md#question-types) for why this needed its own content and question type rather than reusing the word bank).
 
 | Field | Type | Example | Notes |
 |---|---|---|---|
@@ -92,9 +92,9 @@ An array of concepts that only exist as a *combination* of emoji, used by the `c
 
 **Every compound in the bank must have a distinct `emojis` sequence.** Since the emoji sequence is the *entire* prompt (no text hint), two compounds that render the same sequence would make the "correct" choice arbitrary — this is the reason `garoto` (espresso with a dash of milk) isn't in the bank yet: it's visually indistinguishable from `meia de leite` using only 1x ☕ + 1x 🥛.
 
-## Phrase bank — `src/data/phrases.json`
+## Phrase bank — `content_items` where `kind = 'phrases'`
 
-An array of short conversational exchanges, used by the `phrase-match` question type — an emoji plus a Portuguese prompt phrase, and the player picks the matching reply (see [design.md](design.md#conversational-phrases-via-phrase-match) for why this needed its own content and question type).
+Originally `src/data/phrases.json` (still the seed fixture/test data). An array of short conversational exchanges, used by the `phrase-match` question type — an emoji plus a Portuguese prompt phrase, and the player picks the matching reply (see [design.md](design.md#conversational-phrases-via-phrase-match) for why this needed its own content and question type).
 
 | Field | Type | Example | Notes |
 |---|---|---|---|

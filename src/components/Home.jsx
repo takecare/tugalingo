@@ -9,7 +9,7 @@ export default function Home({
   onImportProgress,
   debugMode,
   onOpenDebug,
-  studioMode,
+  isAdmin,
   onOpenStudio,
   userEmail,
   onSignOut,
@@ -99,7 +99,7 @@ export default function Home({
             Debug
           </button>
         )}
-        {studioMode && (
+        {isAdmin && (
           <button className="progress-io__button" onClick={onOpenStudio}>
             Studio
           </button>

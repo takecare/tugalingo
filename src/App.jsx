@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useProgress } from './hooks/useProgress'
+import { useContent } from './hooks/useContent'
+import { useProfile } from './hooks/useProfile'
 import { currentStreak, dateKey } from './lib/dates'
 import { buildLessonContext, buildDebugLessonContext, activeQuestionTypes } from './lib/lessons'
-import { isDebugMode, isStudioMode } from './lib/debug'
+import { isDebugMode } from './lib/debug'
 import { isSupabaseConfigured } from './lib/supabaseClient'
 import { readLocalProgress, isMigrationDismissed, dismissMigration } from './lib/localProgress'
 import Lesson from './components/Lesson'
@@ -19,11 +21,12 @@ function App() {
   const { session, isLoading: authLoading, signInWithEmail, signOut } = useAuth()
   const userId = session?.user?.id ?? null
   const { progress, isLoading: progressLoading, recordLessonCompletion, replaceProgress } = useProgress(userId)
+  const { content, isLoading: contentLoading } = useContent(userId)
+  const { isAdmin } = useProfile(userId)
   const [view, setView] = useState({ screen: 'home' })
   const [localProgress] = useState(readLocalProgress)
   const [migrationDismissed, setMigrationDismissed] = useState(isMigrationDismissed)
   const debugMode = isDebugMode()
-  const studioMode = isStudioMode()
 
   const migrationAvailable = Boolean(localProgress) && !migrationDismissed && progress.history.length === 0
 
@@ -41,7 +44,7 @@ function App() {
   function startLesson() {
     setView({
       screen: 'lesson',
-      context: buildLessonContext(progress),
+      context: buildLessonContext(content, progress),
       questionTypes: activeQuestionTypes(progress),
     })
   }
@@ -49,7 +52,7 @@ function App() {
   function startDebugLesson(type) {
     setView({
       screen: 'lesson',
-      context: buildDebugLessonContext(),
+      context: buildDebugLessonContext(content),
       questionTypes: [type],
       isDebug: true,
     })
@@ -86,7 +89,7 @@ function App() {
     )
   }
 
-  if (authLoading || (session && progressLoading)) {
+  if (authLoading || (session && (progressLoading || contentLoading))) {
     return (
       <div className="app">
         <p>Loading…</p>
@@ -160,7 +163,7 @@ function App() {
         onImportProgress={replaceProgress}
         debugMode={debugMode}
         onOpenDebug={() => setView({ screen: 'debug' })}
-        studioMode={studioMode}
+        isAdmin={isAdmin}
         onOpenStudio={() => setView({ screen: 'studio' })}
         userEmail={session.user.email}
         onSignOut={signOut}

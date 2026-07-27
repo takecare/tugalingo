@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import QuestionRenderer from './questions'
 import { PERSONS, emptyDraft, draftToEntry, entryToDraft, validateEntry } from '../lib/studio'
 import { previewQuestionFor } from '../lib/studioPreview'
-import { supportsFileSystemAccess, openJsonFile, writeJsonFile } from '../lib/studioFile'
+import { fetchContent, upsertContentEntry } from '../lib/contentStore'
 
 const BANK_TABS = [
-  { key: 'words', label: 'Words', fileName: 'words.json' },
-  { key: 'verbs', label: 'Verbs', fileName: 'verbs.json' },
-  { key: 'compounds', label: 'Compounds', fileName: 'compounds.json' },
-  { key: 'phrases', label: 'Phrases', fileName: 'phrases.json' },
+  { key: 'words', label: 'Words' },
+  { key: 'verbs', label: 'Verbs' },
+  { key: 'compounds', label: 'Compounds' },
+  { key: 'phrases', label: 'Phrases' },
 ]
 
 function Field({ label, children }) {
@@ -175,15 +175,28 @@ function BankForm({ bank, draft, onChange }) {
 
 export default function Studio({ onBack }) {
   const [bank, setBank] = useState('words')
-  const [files, setFiles] = useState({}) // { [bank]: { handle, entries } }
+  const [content, setContent] = useState(null) // { words: [...], verbs: [...], compounds: [...], phrases: [...] }
   const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState(() => emptyDraft('words'))
   const [errors, setErrors] = useState([])
   const [status, setStatus] = useState(null)
+  const [saving, setSaving] = useState(false)
 
-  const current = files[bank]
-  const entries = current?.entries ?? []
-  const currentTab = BANK_TABS.find((t) => t.key === bank)
+  const entries = content?.[bank] ?? []
+
+  async function loadContent() {
+    try {
+      const data = await fetchContent()
+      setContent(data)
+      setStatus(null)
+    } catch (err) {
+      setStatus(`Couldn't load content: ${err.message}`)
+    }
+  }
+
+  useEffect(() => {
+    loadContent()
+  }, [])
 
   function switchBank(nextBank) {
     setBank(nextBank)
@@ -191,16 +204,6 @@ export default function Studio({ onBack }) {
     setDraft(emptyDraft(nextBank))
     setErrors([])
     setStatus(null)
-  }
-
-  async function handleOpen() {
-    try {
-      const { handle, data } = await openJsonFile(currentTab.fileName)
-      setFiles((f) => ({ ...f, [bank]: { handle, entries: data } }))
-      setStatus(`Loaded ${data.length} entries from ${currentTab.fileName}.`)
-    } catch (err) {
-      if (err.name !== 'AbortError') setStatus(`Couldn't open the file: ${err.message}`)
-    }
   }
 
   function startNew() {
@@ -219,7 +222,7 @@ export default function Studio({ onBack }) {
     setDraft((d) => ({ ...d, ...patch }))
   }
 
-  function handleAddOrSave() {
+  async function handleAddOrSave() {
     const entry = draftToEntry(bank, draft)
     const validationErrors = validateEntry(bank, entry, entries, editingId)
     if (validationErrors.length) {
@@ -227,22 +230,20 @@ export default function Studio({ onBack }) {
       return
     }
     setErrors([])
-    setFiles((f) => {
-      const list = f[bank]?.entries ?? []
-      const nextList = editingId ? list.map((e) => (e.id === editingId ? entry : e)) : [...list, entry]
-      return { ...f, [bank]: { ...f[bank], entries: nextList } }
-    })
-    setStatus(`${editingId ? 'Updated' : 'Added'} "${entry.id}" — not saved to disk yet.`)
-    startNew()
-  }
-
-  async function handleSaveFile() {
-    if (!current?.handle) return
+    setSaving(true)
     try {
-      await writeJsonFile(current.handle, current.entries)
-      setStatus(`Saved ${current.entries.length} entries to ${currentTab.fileName}.`)
+      await upsertContentEntry(bank, entry)
+      setContent((c) => {
+        const list = c[bank]
+        const nextList = editingId ? list.map((e) => (e.id === editingId ? entry : e)) : [...list, entry]
+        return { ...c, [bank]: nextList }
+      })
+      setStatus(`${editingId ? 'Updated' : 'Added'} "${entry.id}".`)
+      startNew()
     } catch (err) {
-      setStatus(`Couldn't save: ${err.message}`)
+      setStatus(`Couldn't save "${entry.id}": ${err.message}`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -254,18 +255,14 @@ export default function Studio({ onBack }) {
   }
   const previewQuestion = previewEntry?.id ? previewQuestionFor(bank, previewEntry, entries) : null
 
-  if (!supportsFileSystemAccess()) {
+  if (!content) {
     return (
       <div className="studio">
         <button className="icon-exit-button" onClick={onBack}>
           ✕
         </button>
         <h2>Studio</h2>
-        <p>
-          This tool saves directly to your data files using the File System Access API, which your
-          browser doesn't support — try Chrome or Edge. (A download-based fallback for other
-          browsers is planned.)
-        </p>
+        <p>{status ?? 'Loading content…'}</p>
       </div>
     )
   }
@@ -289,70 +286,59 @@ export default function Studio({ onBack }) {
         </div>
       </div>
 
-      {!current && (
-        <button className="studio__button studio__button--primary" onClick={handleOpen}>
-          Open {currentTab.fileName}
-        </button>
-      )}
-
-      {current && (
-        <div className="studio__body">
-          <div className="studio__list">
-            <div className="studio__list-header">
-              <span>{entries.length} entries</span>
-              <button className="studio__button" onClick={handleOpen}>
-                Reload
-              </button>
-            </div>
-            <ul>
-              {entries.map((e) => (
-                <li key={e.id}>
-                  <button
-                    className={`studio__list-item${editingId === e.id ? ' studio__list-item--active' : ''}`}
-                    onClick={() => startEdit(e)}
-                  >
-                    {e.id}
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button className="studio__button studio__button--primary" onClick={handleSaveFile}>
-              Save to disk
+      <div className="studio__body">
+        <div className="studio__list">
+          <div className="studio__list-header">
+            <span>{entries.length} entries</span>
+            <button className="studio__button" onClick={loadContent}>
+              Reload
             </button>
           </div>
-
-          <div className="studio__form">
-            <h3>{editingId ? `Edit "${editingId}"` : 'New entry'}</h3>
-            <BankForm bank={bank} draft={draft} onChange={handleDraftChange} />
-            {errors.length > 0 && (
-              <ul className="studio__errors">
-                {errors.map((e) => (
-                  <li key={e}>{e}</li>
-                ))}
-              </ul>
-            )}
-            <div className="studio__form-actions">
-              <button className="studio__button studio__button--primary" onClick={handleAddOrSave}>
-                {editingId ? 'Save changes' : 'Add entry'}
-              </button>
-              {editingId && (
-                <button className="studio__button" onClick={startNew}>
-                  Cancel
+          <ul>
+            {entries.map((e) => (
+              <li key={e.id}>
+                <button
+                  className={`studio__list-item${editingId === e.id ? ' studio__list-item--active' : ''}`}
+                  onClick={() => startEdit(e)}
+                >
+                  {e.id}
                 </button>
-              )}
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-          <div className="studio__preview">
-            <h3>Preview</h3>
-            {previewQuestion ? (
-              <QuestionRenderer question={previewQuestion} feedback={null} onAnswer={() => {}} />
-            ) : (
-              <p>Fill in the required fields to see a preview.</p>
+        <div className="studio__form">
+          <h3>{editingId ? `Edit "${editingId}"` : 'New entry'}</h3>
+          <BankForm bank={bank} draft={draft} onChange={handleDraftChange} />
+          {errors.length > 0 && (
+            <ul className="studio__errors">
+              {errors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          )}
+          <div className="studio__form-actions">
+            <button className="studio__button studio__button--primary" onClick={handleAddOrSave} disabled={saving}>
+              {editingId ? 'Save changes' : 'Add entry'}
+            </button>
+            {editingId && (
+              <button className="studio__button" onClick={startNew}>
+                Cancel
+              </button>
             )}
           </div>
         </div>
-      )}
+
+        <div className="studio__preview">
+          <h3>Preview</h3>
+          {previewQuestion ? (
+            <QuestionRenderer question={previewQuestion} feedback={null} onAnswer={() => {}} />
+          ) : (
+            <p>Fill in the required fields to see a preview.</p>
+          )}
+        </div>
+      </div>
 
       {status && <p className="progress-io__message">{status}</p>}
     </div>

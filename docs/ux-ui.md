@@ -16,7 +16,7 @@ This is the first thing the player sees, and everything on it is progress-driven
 - **New Lesson button** — the only way to start playing. There's no lesson list, no numbering, no map to navigate.
 - **Export/Import progress** — two small secondary buttons below New Lesson, deliberately understated (plain outlined buttons, not accent-colored) so they don't compete with the primary action. See [below](#export--import-progress).
 - **Debug** — a third button in that same row, but only when the page was loaded with `?debug=true` in the URL; otherwise it doesn't render at all. See [below](#debug-mode).
-- **Studio** — a fourth button, same idea but gated on `?studio=true` instead. See [below](#content-studio).
+- **Studio** — a fourth button, shown only to admin accounts (see [below](#content-studio)) rather than a URL flag like Debug.
 
 ![Home screen with a streak going](images/screen-home-with-streak.png)
 
@@ -50,11 +50,11 @@ A debug lesson plays out exactly like a real one (same 10-question loop, same ex
 
 ![Content studio](images/screen-studio.png)
 
-Loading the app with `?studio=true` reveals a "Studio" button on the home screen (independent of `?debug=true` — the two can be combined, e.g. `?debug=true&studio=true`), which opens a small editor for adding or fixing vocabulary without hand-editing JSON. Four tabs, one per content bank (Words / Verbs / Compounds / Phrases); each starts with an "Open `<file>.json`" button that asks you to pick that actual file from the repo on disk.
+Signed-in accounts with the `admin` role see a "Studio" button on the home screen (independent of `?debug=true`, which anyone can still add to the URL), which opens a small editor for adding or fixing vocabulary without hand-editing JSON or touching the database directly. Four tabs, one per content bank (Words / Verbs / Compounds / Phrases), each loading straight from Supabase the moment the tab opens.
 
 Once opened: a list of every entry currently in that file on the left (click one to load it into the form for editing), a schema-specific form in the middle (a verb's form has five conjugation fields, a word's has an optional "distinct female form" toggle, etc.), and a live preview on the right showing exactly how the entry would appear in a real lesson — the emoji, the article/gender badge, distractor options pulled from whatever else is currently loaded — because the preview is built from a real `Question` object handed to the same `<QuestionRenderer />` a real lesson uses, not a mockup.
 
-"Add entry"/"Save changes" only updates the in-memory list (with inline validation — required fields, a valid id, no duplicate ids) and clears the form for the next one; nothing touches the disk until "Save to disk" is clicked, so a batch of additions can be reviewed in the list before committing them to the file. Saving writes straight back to the exact file that was opened, via the browser's File System Access API — this only works in Chrome/Edge, and browsers that don't support it get a plain explanatory message instead of a broken editor. See [architecture.md](architecture.md#content-studio) for how the save mechanism and live preview work.
+"Add entry"/"Save changes" validates inline (required fields, a valid id, no duplicate ids) and, once valid, saves that one entry to Supabase immediately — there's no separate publish/save-to-disk step, and no browser restriction (it no longer depends on the File System Access API, so it works the same in any browser). Every other signed-in player picks up the change the next time they load the app. See [architecture.md](architecture.md#content-studio) for how the save mechanism, live preview, and admin-only access work.
 
 ## Screen: playing a lesson
 

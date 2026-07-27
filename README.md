@@ -10,7 +10,7 @@ Sign in with your email (a magic link, no password) to play — press "New Lesso
 
 ## Running it locally
 
-Requires Node.js (18+) and a [Supabase](https://supabase.com) project (free tier) — see [docs/architecture.md](docs/architecture.md#accounts--cloud-progress-sync) for the schema, or just copy `.env.example` to `.env` and fill in your project's URL/anon key after running `supabase/schema.sql` against it.
+Requires Node.js (18+) and a [Supabase](https://supabase.com) project (free tier) — copy `.env.example` to `.env` and fill in your project's URL/anon key after running `supabase/schema.sql` against it (this creates the `progress`, `profiles`, and `content_items` tables). The word/verb/compound/phrase banks start empty on a fresh project — seed them with `node scripts/seed-content.mjs > seed.sql && psql "$SUPABASE_DB_URL" -f seed.sql`. See [docs/architecture.md](docs/architecture.md#accounts--cloud-progress-sync) and [docs/architecture.md](docs/architecture.md#content-studio) for the details.
 
 ```bash
 npm install

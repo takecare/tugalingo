@@ -1,8 +1,3 @@
-import words from '../data/words.json'
-import verbs from '../data/verbs.json'
-import compounds from '../data/compounds.json'
-import phrases from '../data/phrases.json'
-
 export const BASE_QUESTIONS = 10
 export const EXTEND_THRESHOLD = 9
 // keyed by correct-count out of the first 10 questions
@@ -45,47 +40,47 @@ export function activeQuestionTypes(progress) {
 export const ALL_QUESTION_TYPES = QUESTION_TYPE_UNLOCKS.map((u) => u.type)
 
 // The first few lessons ever played stick to level-1 words only; after that,
-// the full pool is in play. Adding more `level` tiers to words.json extends
-// the ramp further.
+// the full pool is in play. Adding more `level` tiers to a content bank (see
+// supabase/schema.sql's content_items table) extends the ramp further.
 const LEVEL_2_UNLOCK_AFTER = 3
 
-export function currentWordPool(progress) {
+export function currentWordPool(content, progress) {
   const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
-  return words.filter((w) => w.level <= cap)
+  return content.words.filter((w) => w.level <= cap)
 }
 
-export function currentVerbPool(progress) {
+export function currentVerbPool(content, progress) {
   const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
-  return verbs.filter((v) => v.level <= cap)
+  return content.verbs.filter((v) => v.level <= cap)
 }
 
-export function currentCompoundPool(progress) {
+export function currentCompoundPool(content, progress) {
   const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
-  return compounds.filter((c) => c.level <= cap)
+  return content.compounds.filter((c) => c.level <= cap)
 }
 
-export function currentPhrasePool(progress) {
+export function currentPhrasePool(content, progress) {
   const cap = progress.history.length < LEVEL_2_UNLOCK_AFTER ? 1 : 2
-  return phrases.filter((p) => p.level <= cap)
+  return content.phrases.filter((p) => p.level <= cap)
 }
 
 // Bundles every content pool a question type might draw from. Adding a
 // question type that needs a new kind of content (e.g. a sentence corpus)
 // means adding one more named field here — generate(context, avoidId)
 // implementations just read whichever field(s) they need.
-export function buildLessonContext(progress) {
+export function buildLessonContext(content, progress) {
   return {
-    words: currentWordPool(progress),
-    verbs: currentVerbPool(progress),
-    compounds: currentCompoundPool(progress),
-    phrases: currentPhrasePool(progress),
+    words: currentWordPool(content, progress),
+    verbs: currentVerbPool(content, progress),
+    compounds: currentCompoundPool(content, progress),
+    phrases: currentPhrasePool(content, progress),
   }
 }
 
 // A fully-unlocked context (every level, regardless of the real player's
 // progress) for debug mode — previewing a question type shouldn't depend on
 // having actually played enough lessons to unlock its full content pool.
-export function buildDebugLessonContext() {
+export function buildDebugLessonContext(content) {
   const fullyUnlocked = { history: Array(LEVEL_2_UNLOCK_AFTER).fill({}), activityByDate: {} }
-  return buildLessonContext(fullyUnlocked)
+  return buildLessonContext(content, fullyUnlocked)
 }
