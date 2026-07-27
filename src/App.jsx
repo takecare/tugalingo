@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useProgress } from './hooks/useProgress'
 import { useContent } from './hooks/useContent'
 import { useProfile } from './hooks/useProfile'
+import { useUrlView } from './hooks/useUrlView'
 import { currentStreak, dateKey } from './lib/dates'
 import { buildLessonContext, buildDebugLessonContext, activeQuestionTypes } from './lib/lessons'
 import { isDebugMode } from './lib/debug'
@@ -22,8 +23,8 @@ function App() {
   const userId = session?.user?.id ?? null
   const { progress, isLoading: progressLoading, recordLessonCompletion, replaceProgress } = useProgress(userId)
   const { content, isLoading: contentLoading } = useContent(userId)
-  const { isAdmin } = useProfile(userId)
-  const [view, setView] = useState({ screen: 'home' })
+  const { isAdmin, isLoading: profileLoading } = useProfile(userId)
+  const { view, navigate, goBack } = useUrlView()
   const [localProgress] = useState(readLocalProgress)
   const [migrationDismissed, setMigrationDismissed] = useState(isMigrationDismissed)
   const debugMode = isDebugMode()
@@ -42,7 +43,7 @@ function App() {
   }
 
   function startLesson() {
-    setView({
+    navigate({
       screen: 'lesson',
       context: buildLessonContext(content, progress),
       questionTypes: activeQuestionTypes(progress),
@@ -50,7 +51,7 @@ function App() {
   }
 
   function startDebugLesson(type) {
-    setView({
+    navigate({
       screen: 'lesson',
       context: buildDebugLessonContext(content),
       questionTypes: [type],
@@ -60,7 +61,7 @@ function App() {
 
   function completeLesson(result) {
     if (view.isDebug) {
-      setView({ screen: 'debug' })
+      goBack()
       return
     }
 
@@ -78,8 +79,13 @@ function App() {
     const streak = currentStreak(projectedActivity)
 
     recordLessonCompletion(result.correct, result.total)
-    setView({ screen: 'results', result, isNewBest, streak })
+    navigate({ screen: 'results', result, isNewBest, streak }, { replace: true })
   }
+
+  useEffect(() => {
+    if (!session || view.screen !== 'studio' || profileLoading || isAdmin) return
+    navigate({ screen: 'home' }, { replace: true })
+  }, [session, view.screen, profileLoading, isAdmin, navigate])
 
   if (!isSupabaseConfigured()) {
     return (
@@ -111,7 +117,7 @@ function App() {
         <Lesson
           context={view.context}
           questionTypes={view.questionTypes}
-          onExit={() => setView({ screen: view.isDebug ? 'debug' : 'home' })}
+          onExit={goBack}
           onComplete={completeLesson}
         />
         <VersionBadge />
@@ -122,16 +128,23 @@ function App() {
   if (view.screen === 'debug') {
     return (
       <div className="app">
-        <DebugMenu onSelectType={startDebugLesson} onBack={() => setView({ screen: 'home' })} />
+        <DebugMenu onSelectType={startDebugLesson} onBack={goBack} />
         <VersionBadge />
       </div>
     )
   }
 
   if (view.screen === 'studio') {
+    if (profileLoading || !isAdmin) {
+      return (
+        <div className="app">
+          <p>Loading…</p>
+        </div>
+      )
+    }
     return (
       <div className="app">
-        <Studio onBack={() => setView({ screen: 'home' })} />
+        <Studio onBack={goBack} />
         <VersionBadge />
       </div>
     )
@@ -144,7 +157,7 @@ function App() {
           result={view.result}
           isNewBest={view.isNewBest}
           streak={view.streak}
-          onContinue={() => setView({ screen: 'home' })}
+          onContinue={goBack}
         />
         <VersionBadge />
       </div>
@@ -162,9 +175,9 @@ function App() {
         onStartLesson={startLesson}
         onImportProgress={replaceProgress}
         debugMode={debugMode}
-        onOpenDebug={() => setView({ screen: 'debug' })}
+        onOpenDebug={() => navigate({ screen: 'debug' })}
         isAdmin={isAdmin}
-        onOpenStudio={() => setView({ screen: 'studio' })}
+        onOpenStudio={() => navigate({ screen: 'studio' })}
         userEmail={session.user.email}
         onSignOut={signOut}
         migrationAvailable={migrationAvailable}
