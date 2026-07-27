@@ -11,6 +11,7 @@ export default function Home({
   onOpenDebug,
   isAdmin,
   onOpenStudio,
+  onOpenReminders,
   userEmail,
   onSignOut,
   migrationAvailable,
@@ -94,6 +95,9 @@ export default function Home({
           className="progress-io__input"
           onChange={handleFileSelected}
         />
+        <button className="progress-io__button" onClick={onOpenReminders}>
+          Reminders
+        </button>
         {debugMode && (
           <button className="progress-io__button" onClick={onOpenDebug}>
             Debug

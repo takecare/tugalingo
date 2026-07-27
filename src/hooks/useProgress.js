@@ -29,7 +29,7 @@ export function useProgress(userId) {
 
     supabase
       .from('progress')
-      .select('history, activity_by_date')
+      .select('history, activity_by_date, timezone')
       .eq('user_id', userId)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -40,6 +40,20 @@ export function useProgress(userId) {
           activityByDate: data?.activity_by_date ?? {},
         })
         setIsLoading(false)
+
+        // The send-lesson-reminders edge function needs each user's real
+        // timezone to know their "today" without a browser to ask — keep it
+        // current, but only write when it's actually changed (new sign-in,
+        // moved somewhere new) to avoid a write on every load.
+        const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+        if (detectedTimezone && data?.timezone !== detectedTimezone) {
+          supabase
+            .from('progress')
+            .upsert({ user_id: userId, timezone: detectedTimezone }, { onConflict: 'user_id' })
+            .then(({ error: tzError }) => {
+              if (tzError) console.error('Failed to save timezone', tzError)
+            })
+        }
       })
 
     return () => {

@@ -161,7 +161,7 @@ One row per signed-in user, RLS-restricted to `auth.uid() = user_id` for every o
 | `history[i].correct` / `total` | That attempt's score, kept as a fraction rather than a percentage so the fact that a lesson may have extended (10 vs 12 vs 14 questions) stays visible. A personal-best comparison (shown on the results screen) is `correct / total` across the whole array, not a stored field — computed fresh each time so it can't drift out of sync with `history`. |
 | `history[i].completedAt` | ISO timestamp of that completion. |
 | `activityByDate["<YYYY-MM-DD>"].lessonsCompleted` | How many lessons were completed on that calendar day, keyed by the player's local date (`src/lib/dates.js#dateKey`). Drives the heatmap; the current streak (`src/lib/dates.js#currentStreak`) is also computed from this object on the fly rather than stored, for the same reason — it can never disagree with the record it's derived from. |
-| `timezone` | Not yet used by anything client-side (which always uses the browser's local date). Reserved for the planned reminder-notification job, which needs to know each user's "today" without a browser to ask. |
+| `timezone` | Still unused by anything client-side (which always uses the browser's local date) — but `useProgress.js` now keeps it in sync with the browser's detected IANA timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) once per session, since the [reminder-notification job](architecture.md#lesson-reminders) that reads it has no browser to ask. |
 
 A lesson only writes to this row once it's *completed* — exiting mid-lesson (the ✕ button) records nothing, so an abandoned attempt never counts toward `history`, a day's activity count, or the streak.
 

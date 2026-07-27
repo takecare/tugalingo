@@ -14,6 +14,7 @@ import Home from './components/Home'
 import LessonResults from './components/LessonResults'
 import DebugMenu from './components/DebugMenu'
 import Studio from './components/Studio'
+import NotificationSettings from './components/NotificationSettings'
 import Login from './components/Login'
 import VersionBadge from './components/VersionBadge'
 import './App.css'
@@ -150,6 +151,15 @@ function App() {
     )
   }
 
+  if (view.screen === 'reminders') {
+    return (
+      <div className="app">
+        <NotificationSettings userId={userId} onBack={goBack} />
+        <VersionBadge />
+      </div>
+    )
+  }
+
   if (view.screen === 'results') {
     return (
       <div className="app">
@@ -178,6 +188,7 @@ function App() {
         onOpenDebug={() => navigate({ screen: 'debug' })}
         isAdmin={isAdmin}
         onOpenStudio={() => navigate({ screen: 'studio' })}
+        onOpenReminders={() => navigate({ screen: 'reminders' })}
         userEmail={session.user.email}
         onSignOut={signOut}
         migrationAvailable={migrationAvailable}

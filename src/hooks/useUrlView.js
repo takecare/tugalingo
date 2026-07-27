@@ -6,11 +6,12 @@ import { isDebugMode } from '../lib/debug'
 // 'lesson' and 'results' carry runtime-only data (question sets, scores)
 // that only ever lives in memory, so a bare history entry can't reconstruct
 // them; landing on those via back/forward falls back to home instead.
-const RESTORABLE_SCREENS = new Set(['home', 'debug', 'studio'])
+const RESTORABLE_SCREENS = new Set(['home', 'debug', 'studio', 'reminders'])
 
 const HASH_FOR_SCREEN = {
   debug: '#/debug',
   studio: '#/studio',
+  reminders: '#/reminders',
   lesson: '#/lesson',
   results: '#/results',
 }
@@ -23,6 +24,7 @@ function urlFor(screen) {
 function screenFromHash(hash) {
   if (hash === '#/debug') return isDebugMode() ? 'debug' : 'home'
   if (hash === '#/studio') return 'studio'
+  if (hash === '#/reminders') return 'reminders'
   return 'home'
 }
 

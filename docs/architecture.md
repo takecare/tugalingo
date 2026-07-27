@@ -106,22 +106,52 @@ A fresh Supabase project starts with an empty `content_items` table; `scripts/se
 
 ## Accounts & cloud progress sync
 
-Progress now lives in Supabase Postgres, one row per user, instead of only in `localStorage`. This is what makes cross-device sync and (eventually) reminder notifications possible — see [data-model.md](data-model.md#progress--supabase-progress-table) for the exact schema and RLS policy.
+Progress now lives in Supabase Postgres, one row per user, instead of only in `localStorage`. This is what makes cross-device sync and [reminder notifications](#lesson-reminders) possible — see [data-model.md](data-model.md#progress--supabase-progress-table) for the exact schema and RLS policy.
 
 - **Auth**: magic-link email sign-in only (`supabase.auth.signInWithOtp` via `useAuth.js`) — no password to set, reset, or leak, and Supabase auto-creates the `auth.users` row on first use. There's no separate registration flow.
 - **`App.jsx` gating**: before rendering the normal screen router, it checks (in order) that Supabase is configured (`isSupabaseConfigured()`), that auth has resolved (`useAuth`'s `isLoading`), that a session exists (else renders `Login.jsx`), and that progress has loaded (`useProgress`'s `isLoading`). Only past all four does `home`/`lesson`/etc. render.
 - **`useProgress(userId)`** keeps the exact same external interface it had with `localStorage` (`progress`, `recordLessonCompletion`, `replaceProgress`) — this was the seam the app was already built around, and it held up: `Lesson.jsx`, `Home.jsx`, and `LessonResults.jsx` needed no changes. What's different internally: the initial load is now an async `select` (hence the new `isLoading` flag) instead of a synchronous `localStorage.getItem`, and every write is a Postgres `upsert` instead of a synchronous `localStorage.setItem`. One real tradeoff: recording a completed lesson now requires a network connection — there's no offline write buffer in this version.
 - **Row Level Security**: the `progress` table (and any future per-user table) has RLS enabled with a single `auth.uid() = user_id` policy for all operations, so a user can only ever read or write their own row — enforced by Postgres, not app code.
 - **Migrating pre-accounts local progress**: `src/lib/localProgress.js`'s `readLocalProgress()` checks for real progress left in `localStorage` from before this feature existed (same validation as file import, via `progressFile.js`'s `isValidProgress`). If found, and the signed-in user's server-side history is still empty, `Home.jsx` shows a one-time banner offering to import it (`App.jsx`'s `handleMigrate`, which just calls `replaceProgress`) or dismiss it permanently (`dismissMigration()`, a `localStorage` flag so it doesn't nag on every load).
-- **Why Supabase over a custom server or Firebase**: no server to run or pay for — Supabase's free tier (Postgres + Auth) is a fully managed backend, and its Edge Functions support free scheduled ("cron") execution, which Firebase's equivalent (Cloud Functions) doesn't without the paid Blaze plan — relevant for the reminder-notification feature this groundwork exists for. Frontend hosting is unchanged (still a static bundle on GitHub Pages).
+- **Why Supabase over a custom server or Firebase**: no server to run or pay for — Supabase's free tier (Postgres + Auth) is a fully managed backend, and its Edge Functions support free scheduled ("cron") execution, which Firebase's equivalent (Cloud Functions) doesn't without the paid Blaze plan — the [reminder-notification feature](#lesson-reminders) this groundwork exists for. Frontend hosting is unchanged (still a static bundle on GitHub Pages).
+
+## Lesson reminders
+
+Opt-in push notifications nudging a signed-in user to do a lesson, up to a configurable number of times a day, until they hit their configurable daily lesson goal — then they stop for the day. Three pieces: the frontend subscribes the browser and lets the user configure it, Supabase stores the subscription/settings, and a scheduled Edge Function does the actual sending (no server of our own — see [why Supabase over Firebase](#accounts--cloud-progress-sync) above, which flagged this exact feature as the reason).
+
+**Frontend**:
+
+- **`public/sw.js`** — the service worker, registered unconditionally on app load (`src/main.jsx`, `navigator.serviceWorker.register`) so it's already installed by the time someone opts in. Handles two events: `push` (shows the notification the payload describes) and `notificationclick` (focuses an already-open tab if there is one, otherwise opens one).
+- **`src/lib/vapid.js`** — `urlBase64ToUint8Array()`, converting the VAPID public key from the base64url string it's distributed as (`VITE_VAPID_PUBLIC_KEY`) into the `Uint8Array` `PushManager.subscribe()` requires.
+- **`src/hooks/usePushSubscription.js`** — `isPushSupported()` (browser support + a VAPID key configured) and the `usePushSubscription(userId)` hook: reads the current subscription from the service worker registration, and `subscribe()`/`unsubscribe()` to create or remove one — both locally (`PushManager`) and in Supabase's `push_subscriptions` table (one row per browser/device, keyed by its unique `endpoint`). Deliberately independent of whether reminders are turned on: staying subscribed while paused means turning reminders back on doesn't re-prompt for permission.
+- **`src/hooks/useNotificationSettings.js`** — loads/saves the signed-in user's `notification_settings` row (`enabled`, `dailyLessonGoal`, `maxRemindersPerDay`), same shape as `useProfile.js`/`useProgress.js`.
+- **`src/components/NotificationSettings.jsx`** — the settings screen (`Home.jsx`'s "Reminders" button, `#/reminders`): a toggle that requests permission and subscribes on first enable, the two number fields, and a "turn off on this device" action that unsubscribes without touching the saved settings (so other devices, if any, keep working).
+
+**Backend** (`supabase/schema.sql`):
+
+- **`notification_settings`** — one row per user, RLS-scoped to `auth.uid()` like `progress`/`profiles`.
+- **`push_subscriptions`** — one row per subscribed browser/device (`endpoint` unique), RLS-scoped the same way.
+- **`notification_sends`** — one row per reminder actually sent, written only by the edge function via the service-role key (RLS only grants `select` to the owning user, no `insert`/`update`/`delete` policy at all) so a user can't spoof or suppress their own send history. Used to cap and space out the day's reminders.
+- **`progress.timezone`** — see [data-model.md](data-model.md#progress--supabase-progress-table) — now actually used: `useProgress.js` detects the browser's IANA timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) and upserts it once per session (only when it's changed), so the edge function — which has no browser to ask — can still work out each user's local "today".
+
+**`supabase/functions/send-lesson-reminders/index.ts`** (Deno) is invoked every 15 minutes by a `pg_cron` job (the commented-out block at the bottom of `schema.sql` — not run automatically, since it needs the project's function URL and service-role key filled in). For every user with `notification_settings.enabled = true`, it works out `lessonsToday` from their `progress.activity_by_date` and `timezone`, and decides whether to send with `shouldSendReminder()` — mirrored (not imported; different runtime, no shared build step) from `src/lib/reminderSchedule.js`, which is the unit-tested source of truth for the rule: don't send if today's lesson goal is already met, or the day's reminder cap is already hit, or it's outside the 09:00–21:00 local-hour window, or the minimum gap since the last one (the window divided by the daily cap, so reminders land roughly evenly spaced) hasn't passed yet. A send goes out via `npm:web-push` (VAPID-signed) to every subscription the user has; a `404`/`410` response means that subscription is dead and gets deleted on the spot.
+
+**Deploying this feature** (none of it is live until these are done, and none of them run automatically as part of `npm run build`/the GitHub Pages deploy):
+
+1. Run the updated `supabase/schema.sql` against the project (adds the three tables above).
+2. Generate a VAPID keypair: `npx web-push generate-vapid-keys`. Put the public key in `.env` as `VITE_VAPID_PUBLIC_KEY` (and as a `VITE_VAPID_PUBLIC_KEY` GitHub Actions repo secret, same as the two Supabase build secrets). Never commit or ship the private key.
+3. `supabase functions deploy send-lesson-reminders`, then set its secrets: `supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com`.
+4. Fill in the two placeholders in `schema.sql`'s commented-out `cron.schedule(...)` block (the function URL and the project's service-role key) and run it once in the SQL Editor.
+
+Not covered: iOS Safari only supports Web Push for a PWA added to the home screen (iOS 16.4+) — this app has no install manifest yet, so reminders currently only work on desktop/Android browsers.
 
 ## Tests
 
 Everything under `src/lib/` (and its `questionTypes/` subfolder) is plain, framework-free logic — no DOM, no React — which makes it straightforward to unit test in isolation with [Vitest](https://vitest.dev), without needing a browser or React Testing Library. Each module has a co-located `*.test.js` file (e.g. `src/lib/dates.test.js` next to `dates.js`).
 
-What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`, now driven by a passed-in content bundle rather than a static import), progress file validation (`progressFile.js`), the pre-accounts local-progress migration check (`localProgress.js`), the `?debug=true` check (`debug.js`), the content studio's draft/entry conversion, validation, and preview-question building (`studio.js`, `studioPreview.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks (still kept as fixtures) as an end-to-end sanity check that the actual seed content is well-formed.
+What's covered: the date/streak math (`dates.js`), shuffling and round-picking (`round.js`), emoji-variant selection (`emoji.js`), the difficulty ramp and question-type unlock schedule (`lessons.js`, now driven by a passed-in content bundle rather than a static import), progress file validation (`progressFile.js`), the pre-accounts local-progress migration check (`localProgress.js`), the `?debug=true` check (`debug.js`), the content studio's draft/entry conversion, validation, and preview-question building (`studio.js`, `studioPreview.js`), the lesson-reminder send/no-send decision (`reminderSchedule.js`) and VAPID key decoding (`vapid.js`), and every question type's `generate`/`isCorrect` pair — most with small hand-written fixtures for clarity, plus one test (`questionTypes/index.test.js`) that runs every type against the real `words.json`/`verbs.json`/`compounds.json`/`phrases.json` banks (still kept as fixtures) as an end-to-end sanity check that the actual seed content is well-formed.
 
-Deliberately not covered: React components (`src/components/`), `progressFile.js`'s `downloadProgress`, `useUrlView.js` (needs a real `window.history`/`popstate`), and `useAuth.js`/`useProgress.js`/`useContent.js`/`useProfile.js`/`contentStore.js`'s actual Supabase network calls (all need a real DOM/browser API or a real backend with nothing but wiring to test) — these are thin rendering/wiring layers verified manually in a real browser instead (or with mocked network requests, for the studio's save flow and the login form's OTP call), since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
+Deliberately not covered: React components (`src/components/`), `progressFile.js`'s `downloadProgress`, `useUrlView.js` (needs a real `window.history`/`popstate`), `usePushSubscription.js`/`useNotificationSettings.js`/the `send-lesson-reminders` edge function (need a real service worker/`PushManager`/Deno runtime respectively — `reminderSchedule.js` carries the one piece of that worth unit testing), and `useAuth.js`/`useProgress.js`/`useContent.js`/`useProfile.js`/`contentStore.js`'s actual Supabase network calls (all need a real DOM/browser API or a real backend with nothing but wiring to test) — these are thin rendering/wiring layers verified manually in a real browser instead (or with mocked network requests, for the studio's save flow and the login form's OTP call), since the bulk of this app's actual bug surface (question generation, correctness checking, date math) lives in the logic layer above.
 
 `npm test` runs the suite once; `npm run test:watch` re-runs on file changes. CI (`.github/workflows/deploy.yml`) runs `npm test` before `npm run build`, so a broken test blocks deployment the same way a broken build would.
 
@@ -140,11 +170,15 @@ src/
     useContent.js           # word/verb/compound/phrase banks, Supabase-backed
     useProfile.js            # signed-in user's role, exposes isAdmin
     useUrlView.js             # syncs the current screen with the URL/browser history
+    useNotificationSettings.js # loads/saves per-user reminder settings
+    usePushSubscription.js      # browser push permission + subscribe()/unsubscribe()
   lib/
     lessons.js              # pools, buildLessonContext(content, progress), activeQuestionTypes(), extend rule
     emoji.js                 # pickEmoji() — random emoji variant per question
     supabaseClient.js          # shared Supabase client, isSupabaseConfigured()
     localProgress.js             # pre-accounts localStorage migration check
+    reminderSchedule.js            # shouldSendReminder() — lesson-reminder send/no-send rule
+    vapid.js                        # urlBase64ToUint8Array() for PushManager.subscribe()
     questionTypes/
       emojiMatch.js         # emoji -> pick the word
       reverseMatch.js        # word -> pick the emoji
@@ -168,6 +202,7 @@ src/
     Lesson.jsx                  # plays one lesson, question-type-agnostic
     DebugMenu.jsx                # debug mode: pick any question type directly
     Studio.jsx                     # content studio: add/edit content_items entries with live preview
+    NotificationSettings.jsx        # lesson-reminder settings: enable + daily goal + reminders/day
     questions/
       EmojiMatchQuestion.jsx   # renders emoji-match
       ReverseMatchQuestion.jsx  # renders reverse-match
@@ -181,11 +216,18 @@ src/
     OptionButton.jsx          # word-choice button (article + pt + gender)
     LessonResults.jsx          # post-lesson score + streak screen
     VersionBadge.jsx            # commit-SHA link, bottom corner, every screen
-  App.jsx                      # screen router (home / lesson / debug / studio / results)
+  App.jsx                      # screen router (home / lesson / debug / studio / reminders / results)
   App.css                       # all styling
   index.css                      # theme variables, base styles
+public/
+  sw.js                          # service worker: push + notificationclick handlers
+supabase/
+  schema.sql                     # every table, function, trigger, RLS policy, and the cron setup block
+  functions/
+    send-lesson-reminders/
+      index.ts                   # scheduled edge function: sends the actual push notifications
 ```
 
 (Not shown above: every file directly under `lib/` and `lib/questionTypes/` has a co-located `*.test.js` — see [Tests](#tests).)
 
-Outside `src/`: `supabase/schema.sql` is every table (`progress`, `profiles`, `content_items`), function, trigger, and RLS policy, run once against the Supabase project's Postgres via the SQL Editor (or `psql`); `scripts/seed-content.mjs` turns `src/data/*.json` into a one-time SQL seed for `content_items`; `.env.example` documents the two Vite env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) needed in `.env` locally and as GitHub Actions repo secrets for the deploy workflow.
+Outside `src/`: `supabase/schema.sql` is every table (`progress`, `profiles`, `content_items`, `notification_settings`, `push_subscriptions`, `notification_sends`), function, trigger, and RLS policy, run once against the Supabase project's Postgres via the SQL Editor (or `psql`); `scripts/seed-content.mjs` turns `src/data/*.json` into a one-time SQL seed for `content_items`; `.env.example` documents the Vite env vars needed in `.env` locally and as GitHub Actions repo secrets for the deploy workflow (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and the optional `VITE_VAPID_PUBLIC_KEY` for reminders).
