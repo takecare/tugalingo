@@ -34,6 +34,8 @@ Deployed automatically to GitHub Pages by `.github/workflows/deploy.yml` — eve
 
 To deploy elsewhere instead, `npm run build` produces the same static `dist/` folder, deployable to any static host (Vercel, Netlify, Cloudflare Pages, etc.) — just remember to drop or change the `base: '/tugalingo/'` path in `vite.config.js` if the site won't live under a `/tugalingo/` subpath.
 
+`.github/workflows/keep-supabase-alive.yml` pings the Supabase REST API twice a week so the free-tier project doesn't get auto-paused after a week of inactivity.
+
 ## Docs
 
 - [Architecture](docs/architecture.md) — stack, component/data flow, accounts & cloud progress sync
